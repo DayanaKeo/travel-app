@@ -1,0 +1,21 @@
+version: "3.9"
+services:
+  db:
+    image: postgres:16
+    environment:
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: travelbook
+    ports: ["5432:5432"]
+  mongo:
+    image: mongo:6
+    ports: ["27017:27017"]
+  backend:
+    build: ./backend
+    env_file: ./backend/.env
+    ports: ["4000:4000"]
+    depends_on: [db, mongo]
+  frontend:
+    build: ./frontend
+    env_file: ./frontend/.env
+    ports: ["3000:3000"]
+    depends_on: [backend]
