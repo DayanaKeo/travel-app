@@ -35,7 +35,7 @@ export async function GET() {
       },
     });
 
-    const data = rows.map((v) => ({
+    const data = rows.map((v: typeof rows[number]) => ({
       id: v.id,
       titre: v.titre,
       description: v.description,
