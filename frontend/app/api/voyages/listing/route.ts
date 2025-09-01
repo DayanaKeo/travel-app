@@ -1,7 +1,7 @@
 // frontend/app/api/voyages/listing/route.ts
 import { NextResponse } from "next/server";
-import { prisma } from "../../../../lib/prisma";
-import { requireUser } from "../../../../lib/requireUser";
+import { prisma } from "@/lib/prisma";
+import { requireUser } from "@/lib/requireUser";
 
 export const runtime = "nodejs";
 

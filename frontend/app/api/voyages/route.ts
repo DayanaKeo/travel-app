@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
-import { prisma } from "../../../lib/prisma";
-import { requireUser } from "../../../lib/requireUser";
-import { VoyageCreateSchema } from "../../../lib/validation/voyage";
+import { prisma } from "@/lib/prisma";
+import { requireUser } from "@/lib/requireUser";
+import { createVoyageSchema } from "@/lib/validation/voyage";
 
 export const runtime = "nodejs";
 
@@ -23,7 +23,7 @@ export async function POST(req: Request) {
     const user = await requireUser();
     const body = await req.json();
 
-    const parsed = VoyageCreateSchema.safeParse(body);
+    const parsed = createVoyageSchema.safeParse(body);
     if (!parsed.success) {
       return NextResponse.json({ error: "INVALID_DATA", details: parsed.error.flatten() }, { status: 400 });
     }
