@@ -1,74 +1,113 @@
-// frontend/app/api/voyages/[id]/route.ts
-import { NextResponse } from "next/server";
-import { prisma } from "../../../../lib/prisma";
-import { requireUser } from "../../../../lib/requireUser";
-import { VoyageUpdateSchema } from "../../../../lib/validation/voyage";
+import { NextRequest, NextResponse } from "next/server";
+import { prisma } from "@/lib/prisma";
+import { requireUserFromJwt } from "@/lib/requireUserFromJwt";
+import { updateVoyageSchema } from "@/lib/validation/voyage";
 
 export const runtime = "nodejs";
 
-
-async function assertOwner(voyageId: number, userId: number) {
-  const v = await prisma.voyage.findUnique({ where: { id: voyageId }, select: { userId: true } });
-  if (!v) throw new Error("NOT_FOUND");
-  if (v.userId !== userId) throw new Error("FORBIDDEN");
-}
-
-export async function GET(_: Request, { params }: { params: { id: string } }) {
+export async function GET(req: NextRequest, ctx: { params: Promise<{ id: string }> }) {
   try {
-    const user = await requireUser();
-    const id = Number(params.id);
-    const voyage = await prisma.voyage.findFirst({
-      where: { id, userId: user.id },
-    });
-    if (!voyage) return NextResponse.json({ error: "NOT_FOUND" }, { status: 404 });
-    return NextResponse.json(voyage, { status: 200 });
-  } catch (e: any) {
-    const msg = e?.message === "UNAUTHORIZED" ? "UNAUTHORIZED" : "ERROR";
-    const code = msg === "UNAUTHORIZED" ? 401 : 500;
-    return NextResponse.json({ error: msg }, { status: code });
-  }
-}
-
-export async function PATCH(req: Request, { params }: { params: { id: string } }) {
-  try {
-    const user = await requireUser();
-    const id = Number(params.id);
-    await assertOwner(id, user.id);
-
-    const body = await req.json();
-    const parsed = VoyageUpdateSchema.safeParse(body);
-    if (!parsed.success) {
-      return NextResponse.json({ error: "INVALID_DATA", details: parsed.error.flatten() }, { status: 400 });
+    const { id } = await ctx.params;
+    const voyageId = Number(id);
+    if (!Number.isInteger(voyageId) || voyageId <= 0) {
+      return NextResponse.json({ error: "id invalide" }, { status: 400 });
     }
 
-    const updated = await prisma.voyage.update({
-      where: { id },
-      data: parsed.data,
+    const { id: userId } = await requireUserFromJwt(req);
+
+    const voyage = await prisma.voyage.findFirst({
+      where: { id: voyageId, userId },
+      select: {
+        id: true,
+        createdAt: true,
+        updatedAt: true,
+        userId: true,
+        titre: true,
+        description: true,
+        dateDebut: true,
+        dateFin: true,
+        isPublic: true,
+        // image: true,
+        _count: { select: { etapes: true } },
+      },
     });
-    return NextResponse.json(updated, { status: 200 });
+
+    if (!voyage) return NextResponse.json({ error: "Voyage introuvable" }, { status: 404 });
+    return NextResponse.json({ data: voyage });
   } catch (e: any) {
-    const msg = e?.message;
-    if (msg === "UNAUTHORIZED") return NextResponse.json({ error: msg }, { status: 401 });
-    if (msg === "FORBIDDEN") return NextResponse.json({ error: msg }, { status: 403 });
-    if (msg === "NOT_FOUND") return NextResponse.json({ error: msg }, { status: 404 });
-    return NextResponse.json({ error: "ERROR" }, { status: 500 });
+    if (e.message === "UNAUTHORIZED") return NextResponse.json({ error: "Non authentifié" }, { status: 401 });
+    return NextResponse.json({ error: "Erreur interne" }, { status: 500 });
   }
 }
 
-
-export async function DELETE(_: Request, { params }: { params: { id: string } }) {
+export async function PATCH(req: NextRequest, ctx: { params: Promise<{ id: string }> }) {
   try {
-    const user = await requireUser();
-    const id = Number(params.id);
-    await assertOwner(id, user.id);
+    const { id } = await ctx.params;
+    const voyageId = Number(id);
+    if (!Number.isInteger(voyageId) || voyageId <= 0) {
+      return NextResponse.json({ error: "id invalide" }, { status: 400 });
+    }
 
-    await prisma.voyage.delete({ where: { id } });
-    return NextResponse.json({ ok: true }, { status: 200 });
+    const { id: userId } = await requireUserFromJwt(req);
+
+    // Vérifie la propriété
+    const canEdit = await prisma.voyage.findFirst({ where: { id: voyageId, userId }, select: { id: true } });
+    if (!canEdit) return NextResponse.json({ error: "Accès interdit" }, { status: 403 });
+
+    const body = await req.json();
+    const parsed = updateVoyageSchema.safeParse(body);
+    if (!parsed.success) {
+      return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
+    }
+
+    const p = parsed.data;
+    const updated = await prisma.voyage.update({
+      where: { id: voyageId },
+      data: {
+        ...(p.titre !== undefined ? { titre: p.titre } : {}),
+        ...(p.description !== undefined ? { description: p.description } : {}),
+        ...(p.dateDebut !== undefined ? { dateDebut: p.dateDebut } : {}),
+        ...(p.dateFin !== undefined ? { dateFin: p.dateFin } : {}),
+        ...(p.isPublic !== undefined ? { isPublic: p.isPublic } : {}),
+        // ...(p.image !== undefined ? { image: p.image } : {}),
+      },
+      select: {
+        id: true,
+        createdAt: true,
+        updatedAt: true,
+        userId: true,
+        titre: true,
+        description: true,
+        dateDebut: true,
+        dateFin: true,
+        isPublic: true,
+        // image: true,
+      },
+    });
+
+    return NextResponse.json({ data: updated });
   } catch (e: any) {
-    const msg = e?.message;
-    if (msg === "UNAUTHORIZED") return NextResponse.json({ error: msg }, { status: 401 });
-    if (msg === "FORBIDDEN") return NextResponse.json({ error: msg }, { status: 403 });
-    if (msg === "NOT_FOUND") return NextResponse.json({ error: msg }, { status: 404 });
-    return NextResponse.json({ error: "ERROR" }, { status: 500 });
+    if (e.message === "UNAUTHORIZED") return NextResponse.json({ error: "Non authentifié" }, { status: 401 });
+    return NextResponse.json({ error: "Erreur interne" }, { status: 500 });
+  }
+}
+
+export async function DELETE(req: NextRequest, ctx: { params: Promise<{ id: string }> }) {
+  try {
+    const { id } = await ctx.params;
+    const voyageId = Number(id);
+    if (!Number.isInteger(voyageId) || voyageId <= 0) {
+      return NextResponse.json({ error: "id invalide" }, { status: 400 });
+    }
+
+    const { id: userId } = await requireUserFromJwt(req);
+    const canEdit = await prisma.voyage.findFirst({ where: { id: voyageId, userId }, select: { id: true } });
+    if (!canEdit) return NextResponse.json({ error: "Accès interdit" }, { status: 403 });
+
+    await prisma.voyage.delete({ where: { id: voyageId } });
+    return NextResponse.json({ ok: true });
+  } catch (e: any) {
+    if (e.message === "UNAUTHORIZED") return NextResponse.json({ error: "Non authentifié" }, { status: 401 });
+    return NextResponse.json({ error: "Erreur interne" }, { status: 500 });
   }
 }
