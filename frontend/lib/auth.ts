@@ -13,21 +13,40 @@ export const authOptions: NextAuthOptions = {
   providers: [
     Credentials({
       name: "Credentials",
-      credentials: {
-        email: { label: "Email", type: "text" },
-        password: { label: "Mot de passe", type: "password" },
-      },
+      credentials: { email: { label: "Email", type: "text" }, password: { label: "Mot de passe", type: "password" } },
       async authorize(c) {
         if (!c?.email || !c.password) return null;
-        const user = await prisma.user.findUnique({ where: { email: c.email } });
+        const email = c.email.toLowerCase().trim();
+
+        const user = await prisma.user.findUnique({
+          where: { email },
+          select: { id: true, email: true, role: true, premium: true, passwordHash: true },
+        });
         if (!user?.passwordHash) return null;
+
         const ok = await bcrypt.compare(c.password, user.passwordHash);
-        return ok ? user : null;
+        if (!ok) return null;
+
+        return { id: user.id, email: user.email, role: user.role, premium: user.premium } as any;
       },
     }),
   ],
   callbacks: {
-    async jwt({ token, user }) { if (user) token.uid = (user as any).id; return token; },
-    async session({ session, token }) { if (token?.uid) (session.user as any).id = token.uid; return session; },
+    async jwt({ token, user }) {
+      if (user) {
+        token.uid = (user as any).id;
+        token.role = (user as any).role;
+        token.premium = (user as any).premium;
+      }
+      return token;
+    },
+    async session({ session, token }) {
+      if (token?.uid && session.user) {
+        session.user.id = token.uid as number;
+        session.user.role = token.role as any;
+        session.user.premium = token.premium as boolean;
+      }
+      return session;
+    },
   },
 };
