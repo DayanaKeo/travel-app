@@ -61,7 +61,7 @@ export default function VoyagesListingPage() {
             </p>
           </div>
           <Link
-            href="/voyages"
+            href="/voyages/new"
             className="inline-flex items-center gap-2 bg-gradient-to-r from-orange-500 to-red-500 text-white px-4 py-2 rounded-xl shadow hover:opacity-90 transition"
           >
             <Plus size={18} /> Nouveau Voyage
