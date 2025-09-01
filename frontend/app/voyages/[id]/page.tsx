@@ -1,7 +1,7 @@
 // app/voyages/[id]/page.tsx
 import { headers, cookies } from "next/headers";
 import { notFound } from "next/navigation";
-import { MapPinned, CalendarDays } from "lucide-react";
+import { MapPinned, CalendarDays, Link, PlusSquareIcon } from "lucide-react";
 
 export const dynamic = "force-dynamic";
 
@@ -60,13 +60,11 @@ export default async function VoyageDetailPage({
       ? `${proto}://${host ?? process.env.NEXT_PUBLIC_APP_URL}`
       : "http://localhost:3000";
 
-  // On forward aussi un éventuel Authorization (utile en dev/proxy)
   const auth = h.get("authorization") ?? undefined;
   const commonHeaders: HeadersInit = auth
     ? { cookie: cookieHeader, authorization: auth }
     : { cookie: cookieHeader };
 
-  // URLs absolues + cookies/authorization forwardés
   const [voyageRes, etapesRes] = await Promise.all([
     fetch(`${base}/api/voyages/${voyageId}`, {
       cache: "no-store",
@@ -96,6 +94,14 @@ export default async function VoyageDetailPage({
     <div className="min-h-screen bg-[#FFF5F5]">
       <div className="max-w-5xl mx-auto px-4 sm:px-6 py-8 space-y-6">
         <header className="flex items-start justify-between gap-4">
+          <div className="flex justify-end">
+            <a
+              href={`/etapes/new?voyageId=${voyageId}`}
+              className="inline-flex items-center gap-2 rounded-xl bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 text-sm font-medium shadow-sm"
+            >
+              <PlusSquareIcon className="h-4 w-4" /> Ajouter une étape
+            </a>
+          </div>
           <div>
             <h1 className="text-2xl sm:text-3xl font-semibold text-[#E63946]">{voyage.titre}</h1>
             <p className="text-sm text-gray-500 flex items-center gap-2">
@@ -137,11 +143,13 @@ export default async function VoyageDetailPage({
               <ul className="space-y-3">
                 {etapes.map((e) => (
                   <li key={e.id} className="border border-orange-100 rounded-xl p-3">
-                    <p className="font-medium text-[#E63946]">{e.titre}</p>
-                    <p className="text-xs text-gray-500">
-                      {new Date(e.date).toLocaleDateString()} · {e.adresse}
-                    </p>
-                    {e.texte && <p className="text-sm text-gray-700 mt-1">{e.texte}</p>}
+                    <a href={`/etapes/${e.id}`}>
+                      <p className="font-medium text-[#E63946]">{e.titre}</p>
+                      <p className="text-xs text-gray-500">
+                        {new Date(e.date).toLocaleDateString()} · {e.adresse}
+                      </p>
+                      {e.texte && <p className="text-sm text-gray-700 mt-1">{e.texte}</p>}
+                    </a>
                   </li>
                 ))}
                 {etapes.length === 0 && (
