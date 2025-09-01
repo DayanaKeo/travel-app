@@ -1,9 +1,8 @@
 import { NextResponse } from "next/server";
 import bcrypt from "bcrypt";
-import { prisma } from "../../../../lib/prisma";
-import { SignupSchema } from "../../../../lib/validation/auth";
+import { prisma } from "@/lib/prisma";
+import { SignupSchema } from "@/lib/validation/auth";
 
-// Rate-limit mémoire simple (dev)
 const buckets = new Map<string, { count: number; ts: number }>();
 function rateLimit(ip: string, limit = 10, windowMs = 60_000) {
   const now = Date.now();
@@ -23,8 +22,8 @@ export async function POST(req: Request) {
     const body = await req.json();
     const parsed = SignupSchema.safeParse(body);
     if (!parsed.success) {
-      console.warn("SIGNUP_ZOD_ERROR", parsed.error.flatten());
-      return NextResponse.json({ error: "Données invalides", details: parsed.error.flatten() }, { status: 400 });
+      console.warn("ERREUR_INSCRIPTION_ZOD", parsed.error.issues);
+      return NextResponse.json({ error: "Données invalides", details: parsed.error.issues }, { status: 400 });
     }
     const { name, email, password } = parsed.data;
 
@@ -40,16 +39,15 @@ export async function POST(req: Request) {
         name,
         email,
         passwordHash,
-        // grâce au schema Prisma: role par défaut = USER, premium=false
       },
       select: { id: true, email: true, name: true, role: true, createdAt: true },
     });
 
     return NextResponse.json({ ok: true, user }, { status: 201 });
   } catch (err: any) {
-    console.error("SIGNUP_ERROR", err);
+    console.error("ERREUR_INSCRIPTION", err);
     return NextResponse.json({ error: "Erreur serveur" }, { status: 500 });
   }
 }
 
-export const runtime = "nodejs"; // bcrypt/Prisma → Node runtime
+export const runtime = "nodejs";
