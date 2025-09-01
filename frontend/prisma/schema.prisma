@@ -100,10 +100,25 @@ model Etape {
   adresse   String
   date      DateTime
   createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  status    EtapeStatus @default(DRAFT)
+  ordre     Int?
+  deletedAt DateTime?
 
   voyage Voyage  @relation(fields: [voyageId], references: [id], onDelete: Cascade)
   media  Media[]
+
+  @@index([voyageId, date]) // timeline + carte
+   @@index([date])
+   @@fulltext([titre, texte]) // si MySQL 8 et Prisma ft-index activé
 }
+
+enum EtapeStatus {
+  DRAFT
+  PUBLISHED
+}
+
 
 model Media {
   id        Int       @id @default(autoincrement())
