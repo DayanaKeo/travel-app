@@ -5,10 +5,23 @@ import { getEtape } from "@/app/services/etapes";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale/fr";
 import { notFound } from "next/navigation";
+import { listMediasByEtape } from "@/app/services/medias";
+import MediaUploader from "@/app/api/etapes/[id]/MediaUploader";
+import MediaCard from "@/app/api/etapes/[id]/MediaCard";
+
 
 function fmt(d: string | Date) {
   return format(new Date(d), "d MMM yyyy", { locale: fr });
 }
+
+type Media = { id: number; url: string; type: string; createdAt?: string };
+
+// async function getEtapeMedias(etapeId: number) {
+//   const res = await fetch(`${process.env.NEXT_PUBLIC_APP_URL ?? ""}/api/medias/list?etapeId=${etapeId}`, { cache: "no-store" });
+//   if (!res.ok) return [];
+//   const { data } = (await res.json()) as { data: Media[] };
+//   return data;
+// }
 
 export default async function EtapeDetailPage({
   params,
@@ -20,6 +33,8 @@ export default async function EtapeDetailPage({
   if (!Number.isInteger(etapeId) || etapeId <= 0) notFound();
 
   const { data: e } = await getEtape(etapeId);
+  const medias = await listMediasByEtape(etapeId);
+
   if (!e) notFound();
 
   return (
@@ -80,6 +95,23 @@ export default async function EtapeDetailPage({
               </p>
             </div>
           </div>
+        </div>
+
+        <div className="mt-8">
+          <div className="mb-3 flex items-center justify-between">
+            <h3 className="text-lg font-semibold text-gray-900">Médias</h3>
+            <MediaUploader etapeId={etapeId} />
+          </div>
+
+          {medias.length > 0 ? (
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+              {medias.map((m) => (
+                <MediaCard key={m.id} media={m} />
+              ))}
+            </div>
+          ) : (
+            <p className="text-sm text-gray-600">Aucun média pour le moment.</p>
+          )}
         </div>
 
         <div className="mt-6 rounded-2xl bg-indigo-50 text-indigo-900 border border-indigo-100 p-5">
