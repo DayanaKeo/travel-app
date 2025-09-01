@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import { Plus, Globe2, MapPin, Share2, CalendarDays, Eye, MapPinned } from "lucide-react";
 
 type Item = {
@@ -23,6 +24,7 @@ export default function VoyagesListingPage() {
   const [items, setItems] = useState<Item[]>([]);
   const [q, setQ] = useState("");
   const [filter, setFilter] = useState<"all" | "public" | "private">("all");
+  const router = useRouter();
 
   useEffect(() => {
     (async () => {
@@ -51,12 +53,12 @@ export default function VoyagesListingPage() {
   return (
     <div className="min-h-screen bg-[#FFF5F5]">
       <div className="max-w-6xl mx-auto px-4 sm:px-6 py-8 space-y-6">
-
-        {/* Header & CTA */}
         <div className="flex items-center justify-between gap-3">
           <div>
             <h1 className="text-2xl sm:text-3xl font-semibold text-[#E63946]">Mes Carnets de Voyage</h1>
-            <p className="text-sm text-gray-500">{total} voyage{total>1?"s":""}</p>
+            <p className="text-sm text-gray-500">
+              {total} voyage{total > 1 ? "s" : ""}
+            </p>
           </div>
           <Link
             href="/voyages"
@@ -66,7 +68,6 @@ export default function VoyagesListingPage() {
           </Link>
         </div>
 
-        {/* Recherche & filtre */}
         <div className="flex flex-col sm:flex-row gap-3">
           <div className="flex-1 relative">
             <input
@@ -88,21 +89,28 @@ export default function VoyagesListingPage() {
           </select>
         </div>
 
-        {/* Stat cards */}
         <div className="grid md:grid-cols-3 gap-4">
           <StatCard icon={<Globe2 />} label="Total voyages" value={total} />
           <StatCard icon={<MapPin />} label="Pays visités" value={Math.max(1, Math.min(12, total))} />
           <StatCard icon={<Share2 />} label="Partagés" value={shared} />
         </div>
 
-        {/* Grid de voyages */}
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
           {filtered.map((v) => (
             <article
               key={v.id}
-              className="rounded-2xl overflow-hidden bg-white shadow border border-orange-100"
+              role="button"
+              tabIndex={0}
+              aria-label={`Ouvrir le voyage ${v.titre}`}
+              onClick={() => router.push(`/voyages/${v.id}`)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === " ") {
+                  e.preventDefault();
+                  router.push(`/voyages/${v.id}`);
+                }
+              }}
+              className="rounded-2xl overflow-hidden bg-white shadow border border-orange-100 cursor-pointer focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#E63946] hover:shadow-md transition"
             >
-              {/* Cover */}
               <div className="relative">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
@@ -120,7 +128,6 @@ export default function VoyagesListingPage() {
                 </div>
               </div>
 
-              {/* Contenu */}
               <div className="p-4">
                 <h3 className="font-semibold text-[#E63946]">{v.titre}</h3>
                 {v.description && (
@@ -133,7 +140,7 @@ export default function VoyagesListingPage() {
                     {new Date(v.dateDebut).toLocaleDateString()} → {new Date(v.dateFin).toLocaleDateString()}
                   </span>
                   <span className="inline-flex items-center gap-1">
-                    <MapPinned size={14} /> {v.etapesCount} étape{v.etapesCount>1?"s":""}
+                    <MapPinned size={14} /> {v.etapesCount} étape{v.etapesCount > 1 ? "s" : ""}
                   </span>
                   <span className="ml-auto inline-flex items-center gap-1">
                     <Eye size={14} /> 0
@@ -145,9 +152,7 @@ export default function VoyagesListingPage() {
         </div>
 
         {filtered.length === 0 && (
-          <div className="text-center text-gray-500 py-16">
-            Aucun voyage ne correspond à la recherche.
-          </div>
+          <div className="text-center text-gray-500 py-16">Aucun voyage ne correspond à la recherche.</div>
         )}
       </div>
     </div>
@@ -161,9 +166,7 @@ function StatCard({ icon, label, value }: { icon: React.ReactNode; label: string
         <p className="text-sm text-gray-500">{label}</p>
         <p className="text-2xl font-semibold">{value}</p>
       </div>
-      <div className="h-10 w-10 rounded-xl bg-orange-50 text-[#E63946] grid place-items-center">
-        {icon}
-      </div>
+      <div className="h-10 w-10 rounded-xl bg-orange-50 text-[#E63946] grid place-items-center">{icon}</div>
     </div>
   );
 }
