@@ -1,43 +1,65 @@
+// app/lib/validators/voyage.ts
 import { z } from "zod";
 
-const CoercedDate = z
-  .union([
-    z.string().min(1, "Date requise"),
-    z.date(),
-  ])
-  .transform((val) => (val instanceof Date ? val : new Date(val)))
-  .refine((d) => !Number.isNaN(d.getTime()), "Date invalide");
+const title = z.string().min(3, "Titre trop court").max(150, "Titre trop long");
+const description = z.string().max(5000, "Description trop longue").optional().nullable();
+const isPublic = z.coerce.boolean().optional(); // si passé en string depuis un form
+const imageUrl = z
+  .string()
+  .url("URL d'image invalide")
+  .max(1024)
+  .optional()
+  .or(z.literal("").transform(() => undefined)); // autoriser vide
 
-export const VoyageCreateSchema = z
+// Dates au format ISO ou Date, avec normalisation en Date
+const isoOrDate = z.union([z.string(), z.date()]).transform((v, ctx) => {
+  const d = v instanceof Date ? v : new Date(v);
+  if (Number.isNaN(d.getTime())) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Date invalide (ISO attendu)" });
+  }
+  return d;
+});
+
+export const createVoyageSchema = z
   .object({
-    titre: z.string().trim().min(3, "Titre trop court").max(120, "Titre trop long"),
-    description: z
-      .string()
-      .trim()
-      .max(2000)
-      .optional()
-      .or(z.literal(""))
-      .transform((v) => (v === "" ? undefined : v)),
-    dateDebut: CoercedDate,
-    dateFin: CoercedDate,
+    titre: title,
+    description,
+    dateDebut: isoOrDate,
+    dateFin: isoOrDate,
+    isPublic: isPublic.default(false),
+    image: imageUrl,
   })
-  .refine((d) => d.dateDebut <= d.dateFin, {
-    message: "dateDebut doit être avant (ou égale à) dateFin",
+  .refine((data) => data.dateFin >= data.dateDebut, {
+    message: "La date de fin doit être supérieure ou égale à la date de début",
     path: ["dateFin"],
   });
 
-export const VoyageUpdateSchema = z
+
+export const updateVoyageSchema = z
   .object({
-    titre: z.string().trim().min(3).max(120).optional(),
-    description: z.string().trim().max(2000).optional(),
-    dateDebut: CoercedDate.optional(),
-    dateFin: CoercedDate.optional(),
-    isPublic: z.boolean().optional(),
+    titre: title.optional(),
+    description,
+    dateDebut: isoOrDate.optional(),
+    dateFin: isoOrDate.optional(),
+    isPublic: isPublic,
+    image: imageUrl,
   })
   .refine(
-    (d) => {
-      if (d.dateDebut && d.dateFin) return d.dateDebut <= d.dateFin;
+    (data) => {
+      if (data.dateDebut && data.dateFin) {
+        return data.dateFin >= data.dateDebut;
+      }
       return true;
     },
-    { message: "dateDebut doit être avant (ou égale à) dateFin", path: ["dateFin"] }
+    {
+      message: "La date de fin doit être supérieure ou égale à la date de début",
+      path: ["dateFin"],
+    }
   );
+
+export const listVoyagesQuerySchema = z.object({
+  q: z.string().max(200).optional(),
+  page: z.coerce.number().int().positive().optional().default(1),
+  pageSize: z.coerce.number().int().min(1).max(100).optional().default(20),
+  order: z.enum(["asc", "desc"]).optional().default("desc"),
+});
