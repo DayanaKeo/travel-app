@@ -1,4 +1,3 @@
-// services/voyages.ts
 type Voyage = {
   id: number;
   titre: string;
@@ -25,4 +24,40 @@ export async function getVoyageById(id: number, ctx?: Ctx): Promise<Voyage | nul
   const json = await res.json();
   return json.data as Voyage;
 
+}
+
+export async function createVoyageJSON(payload: {
+  titre: string;
+  description?: string | null;
+  dateDebut: string;
+  dateFin: string;
+  isPublic?: boolean;
+}): Promise<{ data: Voyage }> {
+  const res = await fetch("/api/voyages", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+  if (!res.ok) throw new Error((await res.json().catch(() => null))?.error || "Création impossible");
+  return res.json();
+}
+
+export async function createVoyageWithCover(payload: {
+  titre: string;
+  description?: string | null;
+  dateDebut: string;
+  dateFin: string;
+  isPublic?: boolean;
+  cover?: File | null;
+}): Promise<{ data: Voyage }> {
+  const form = new FormData();
+  form.append("titre", payload.titre);
+  if (payload.description) form.append("description", payload.description);
+  form.append("dateDebut", payload.dateDebut);
+  form.append("dateFin", payload.dateFin);
+  if (payload.isPublic) form.append("isPublic", "true");
+  if (payload.cover) form.append("cover", payload.cover);
+  const res = await fetch("/api/voyages", { method: "POST", body: form });
+  if (!res.ok) throw new Error((await res.json().catch(() => null))?.error || "Création impossible");
+  return res.json();
 }
