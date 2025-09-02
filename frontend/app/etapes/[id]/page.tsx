@@ -1,27 +1,19 @@
 import Image from "next/image";
 import Link from "next/link";
 import { Calendar, MapPin, ChevronLeft, Edit3 } from "lucide-react";
-import { getEtape } from "@/app/services/etapes";
+import { getEtapeSSR } from "@/app/services/etapes.server";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale/fr";
 import { notFound } from "next/navigation";
-import { listMediasByEtape } from "@/app/services/medias";
-import MediaUploader from "@/app/api/etapes/[id]/MediaUploader";
-import MediaCard from "@/app/api/etapes/[id]/MediaCard";
+import { listMediasByEtapeSSR } from "@/app/services/medias.server";
+import MediaUploader from "@/app/etapes/[id]/MediaUploader";
+import MediaCard from "@/app/etapes/[id]/MediaCard";
 
+export const dynamic = "force-dynamic";
 
 function fmt(d: string | Date) {
   return format(new Date(d), "d MMM yyyy", { locale: fr });
 }
-
-type Media = { id: number; url: string; type: string; createdAt?: string };
-
-// async function getEtapeMedias(etapeId: number) {
-//   const res = await fetch(`${process.env.NEXT_PUBLIC_APP_URL ?? ""}/api/medias/list?etapeId=${etapeId}`, { cache: "no-store" });
-//   if (!res.ok) return [];
-//   const { data } = (await res.json()) as { data: Media[] };
-//   return data;
-// }
 
 export default async function EtapeDetailPage({
   params,
@@ -32,10 +24,10 @@ export default async function EtapeDetailPage({
   const etapeId = Number(id);
   if (!Number.isInteger(etapeId) || etapeId <= 0) notFound();
 
-  const { data: e } = await getEtape(etapeId);
-  const medias = await listMediasByEtape(etapeId);
-
+  const { data: e } = await getEtapeSSR(etapeId);
   if (!e) notFound();
+
+  const medias = await listMediasByEtapeSSR(etapeId);
 
   return (
     <div className="min-h-screen bg-[#fff6f1]">
