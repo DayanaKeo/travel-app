@@ -1,8 +1,8 @@
-// app/voyages/[id]/page.tsx
 import { headers, cookies } from "next/headers";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { MapPinned, CalendarDays, PlusSquareIcon, Edit3, Eye, EyeOff, Clock } from "lucide-react";
+import SharePanel from "./SharePanel";
 
 export const dynamic = "force-dynamic";
 
@@ -46,7 +46,6 @@ export default async function VoyageDetailPage({
   const voyageId = Number(id);
   if (!Number.isInteger(voyageId) || voyageId <= 0) notFound();
 
-  // Next 15: cookies() & headers() doivent être await
   const cookieStore = await cookies();
   const cookieHeader = cookieStore
     .getAll()
@@ -150,9 +149,15 @@ export default async function VoyageDetailPage({
           </header>
         )}
 
-        {/* Barre d’actions sticky (UNIQUE endroit avec les boutons) */}
         <div className="sticky top-3 z-10">
           <div className="bg-white/90 backdrop-blur rounded-2xl border border-orange-100 shadow px-4 py-3 flex items-center justify-between">
+            <a href={`/voyages/${voyageId}/share`}
+              className="inline-flex items-center gap-2 rounded-xl bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 text-sm font-medium shadow-sm">
+              Partager
+            </a>
+            {/* <a href="#share" className="inline-flex items-center gap-2 rounded-xl bg-white hover:bg-orange-50 text-[#E63946] px-3 py-1.5 text-xs font-medium shadow-sm border border-orange-100">
+              Partager
+            </a> */}
             <div className="text-xs text-gray-600 flex items-center gap-3">
               <span className="inline-flex items-center gap-1.5">
                 <CalendarDays className="h-4 w-4" /> {dateRange}
@@ -206,7 +211,6 @@ export default async function VoyageDetailPage({
                   .
                 </div>
               ) : (
-                // Timeline
                 <ol className="relative border-l-2 border-orange-200 pl-4 space-y-4">
                   {etapes.map((e) => (
                     <li key={e.id} className="relative">
@@ -240,6 +244,9 @@ export default async function VoyageDetailPage({
               </p>
             </div>
           </aside>
+        </section>
+        <section id="share" className="md:col-span-2">
+          <SharePanel voyageId={voyageId} />
         </section>
       </div>
     </div>
