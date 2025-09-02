@@ -21,3 +21,8 @@ export async function getOwnerUserIdByEtapeId(etapeId: number): Promise<number |
   });
   return et?.voyage.userId ?? null;
 }
+
+export async function getOwnerUserIdByVoyageId(voyageId: number) {
+  const v = await prisma.voyage.findUnique({ where: { id: voyageId }, select: { userId: true } });
+  return v?.userId ?? null;
+}
