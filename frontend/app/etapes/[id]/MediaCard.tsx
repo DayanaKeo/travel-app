@@ -10,6 +10,7 @@ export default function MediaCard({ media }: { media: Media }) {
   const router = useRouter();
   const [del, setDel] = useState(false);
   const [err, setErr] = useState<string | null>(null);
+  const optimized = media.url.replace('/upload/', '/upload/f_auto,q_auto:eco/');
 
   async function onDelete() {
     if (!confirm("Supprimer définitivement ce média ?")) return;
@@ -32,9 +33,9 @@ export default function MediaCard({ media }: { media: Media }) {
   return (
     <div className="relative overflow-hidden rounded-xl border">
       {media.type === "video" ? (
-        <video src={media.url} controls className="w-full h-40 object-cover" />
+        <video src={optimized} controls className="w-full h-40 object-cover" />
       ) : (
-        <img src={media.url} alt="" className="w-full h-40 object-cover" />
+        <img src={optimized} alt="" className="w-full h-40 object-cover" />
       )}
 
       <button
