@@ -1,10 +1,15 @@
 import Image from "next/image";
 import Link from "next/link";
 import { Calendar, MapPin, ChevronLeft, Edit3 } from "lucide-react";
-import { getEtape } from "@/app/services/etapes";
+import { getEtapeSSR } from "@/app/services/etapes.server";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale/fr";
 import { notFound } from "next/navigation";
+import { listMediasByEtapeSSR } from "@/app/services/medias.server";
+import MediaUploader from "@/app/etapes/[id]/MediaUploader";
+import MediaCard from "@/app/etapes/[id]/MediaCard";
+
+export const dynamic = "force-dynamic";
 
 function fmt(d: string | Date) {
   return format(new Date(d), "d MMM yyyy", { locale: fr });
@@ -19,8 +24,10 @@ export default async function EtapeDetailPage({
   const etapeId = Number(id);
   if (!Number.isInteger(etapeId) || etapeId <= 0) notFound();
 
-  const { data: e } = await getEtape(etapeId);
+  const { data: e } = await getEtapeSSR(etapeId);
   if (!e) notFound();
+
+  const medias = await listMediasByEtapeSSR(etapeId);
 
   return (
     <div className="min-h-screen bg-[#fff6f1]">
@@ -80,6 +87,23 @@ export default async function EtapeDetailPage({
               </p>
             </div>
           </div>
+        </div>
+
+        <div className="mt-8">
+          <div className="mb-3 flex items-center justify-between">
+            <h3 className="text-lg font-semibold text-gray-900">Médias</h3>
+            <MediaUploader etapeId={etapeId} />
+          </div>
+
+          {medias.length > 0 ? (
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+              {medias.map((m) => (
+                <MediaCard key={m.id} media={m} />
+              ))}
+            </div>
+          ) : (
+            <p className="text-sm text-gray-600">Aucun média pour le moment.</p>
+          )}
         </div>
 
         <div className="mt-6 rounded-2xl bg-indigo-50 text-indigo-900 border border-indigo-100 p-5">

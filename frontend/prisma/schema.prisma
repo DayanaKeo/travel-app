@@ -83,6 +83,7 @@ model Voyage {
   isPublic    Boolean  @default(false)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+  image       String?
 
   user   User        @relation(fields: [userId], references: [id], onDelete: Cascade)
   etapes Etape[]

@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { requireUserFromJwt } from "@/lib/requireUserFromJwt";
 import { getOwnerUserIdByEtapeId } from "@/lib/ownership";
 import { updateEtapeSchema } from "@/lib/validation/etape";
+import { Prisma } from "@prisma/client";
 
 export const runtime = "nodejs";
 
@@ -18,7 +19,6 @@ async function assertEtapeOwnershipOr404(etapeId: number, userId: number) {
   if (owner !== userId) throw new Error("FORBIDDEN");
 }
 
-
 export async function GET(req: NextRequest, ctx: { params: Promise<{ id: string }> }) {
   try {
     const { id } = await ctx.params;
@@ -29,9 +29,17 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ id: string 
     await assertEtapeOwnershipOr404(etapeId, userId);
 
     const etape = await prisma.etape.findUnique({ where: { id: etapeId } });
-    if (!etape) return NextResponse.json({ error: "Étape introuvable" }, { status: 404 });
+    if (!etape) {
+      return NextResponse.json({ error: "Étape introuvable" }, { status: 404 });
+    }
 
-    return NextResponse.json({ data: etape });
+    const data = {
+      ...etape,
+      latitude: Number(etape.latitude),
+      longitude: Number(etape.longitude),
+    };
+
+    return NextResponse.json({ data });
   } catch (e: any) {
     if (e.message === "UNAUTHORIZED") return NextResponse.json({ error: "Non authentifié" }, { status: 401 });
     if (e.message === "FORBIDDEN") return NextResponse.json({ error: "Accès interdit" }, { status: 403 });
@@ -56,21 +64,27 @@ export async function PATCH(req: NextRequest, ctx: { params: Promise<{ id: strin
     }
 
     const payload = parsed.data;
-    const updated = await prisma.etape.update({
-      where: { id: etapeId },
-      data: {
-        ...("titre" in payload ? { titre: payload.titre } : {}),
-        ...("adresse" in payload ? { adresse: payload.adresse } : {}),
-        ...("texte" in payload ? { texte: payload.texte ?? null } : {}),
-        ...("latitude" in payload ? { latitude: payload.latitude } : {}),
-        ...("longitude" in payload ? { longitude: payload.longitude } : {}),
-        ...("date" in payload && payload.date ? { date: payload.date } : {}),
-        // ...("ordre" in payload ? { ordre: payload.ordre ?? null } : {}),
-        // ...("status" in payload ? { status: payload.status } : {}),
-      },
-    });
 
-    return NextResponse.json({ data: updated });
+    const data: Record<string, any> = {
+      ...("titre" in payload ? { titre: payload.titre } : {}),
+      ...("adresse" in payload ? { adresse: payload.adresse } : {}),
+      ...("texte" in payload ? { texte: payload.texte ?? null } : {}),
+      ...("latitude" in payload ? { latitude: new Prisma.Decimal((payload as any).latitude) } : {}),
+      ...("longitude" in payload ? { longitude: new Prisma.Decimal((payload as any).longitude) } : {}),
+      ...("date" in payload && payload.date ? { date: payload.date } : {}),
+      // ...("ordre" in payload ? { ordre: payload.ordre ?? null } : {}),
+      // ...("status" in payload ? { status: payload.status } : {}),
+    };
+
+    const row = await prisma.etape.update({ where: { id: etapeId }, data });
+
+    const returned = {
+      ...row,
+      latitude: Number(row.latitude),
+      longitude: Number(row.longitude),
+    };
+
+    return NextResponse.json({ data: returned });
   } catch (e: any) {
     if (e.message === "UNAUTHORIZED") return NextResponse.json({ error: "Non authentifié" }, { status: 401 });
     if (e.message === "FORBIDDEN") return NextResponse.json({ error: "Accès interdit" }, { status: 403 });

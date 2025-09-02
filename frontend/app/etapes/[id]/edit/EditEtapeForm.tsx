@@ -1,217 +1,256 @@
-// app/etapes/[id]/edit/EditEtapeForm.tsx
 "use client";
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
+import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { z } from "zod";
-import { updateEtapeSchema } from "@/lib/validation/etape";
-import type { Etape } from "@/app/services/etapes";
+import { updateEtape, deleteEtape } from "@/app/services/etapes.client";
+import { Calendar, MapPin, Save, Trash2, Loader2, FileText, MapPinned } from "lucide-react";
 
-type FormValues = z.input<typeof updateEtapeSchema>;
+type Etape = {
+  id: number;
+  voyageId: number;
+  titre: string;
+  adresse: string;
+  texte: string | null;
+  latitude: number;
+  longitude: number;
+  date: string; // ISO
+};
 
-function toDateInputValue(isoOrDateStr: string) {
-  const d = new Date(isoOrDateStr);
-  const yyyy = d.getFullYear();
-  const mm = String(d.getMonth() + 1).padStart(2, "0");
-  const dd = String(d.getDate()).padStart(2, "0");
-  return `${yyyy}-${mm}-${dd}`;
+function toDateInput(d: string | Date) {
+  const dd = new Date(d);
+  const y = dd.getFullYear();
+  const m = String(dd.getMonth() + 1).padStart(2, "0");
+  const day = String(dd.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
 }
+
+const schema = z.object({
+  titre: z.string().min(2, "2 caractères min").max(120),
+  adresse: z.string().min(3, "3 caractères min").max(255),
+  texte: z.string().max(2000, "2000 caractères max").optional().nullable(),
+  latitude: z
+    .string()
+    .refine((s) => s === "" || (!Number.isNaN(Number(s)) && Number(s) >= -90 && Number(s) <= 90), {
+      message: "Latitude invalide (–90 à 90)",
+    })
+    .optional(),
+  longitude: z
+    .string()
+    .refine((s) => s === "" || (!Number.isNaN(Number(s)) && Number(s) >= -180 && Number(s) <= 180), {
+      message: "Longitude invalide (–180 à 180)",
+    })
+    .optional(),
+  date: z.string().min(4, "Date invalide"),
+});
+
+type FormValues = z.input<typeof schema>;
 
 export default function EditEtapeForm({ etape, voyageId }: { etape: Etape; voyageId: number }) {
   const router = useRouter();
-  const [serverError, setServerError] = React.useState<string | null>(null);
-  const [loading, setLoading] = React.useState(false);
-  const [deleting, setDeleting] = React.useState(false);
+  const [submitting, setSubmitting] = React.useState(false);
+  const [deleteLoading, setDeleteLoading] = React.useState(false);
+  const [err, setErr] = React.useState<string | null>(null);
 
   const {
     register,
     handleSubmit,
     formState: { errors, isDirty },
-    reset,
+    getValues,
+    watch,
   } = useForm<FormValues>({
-    resolver: zodResolver(updateEtapeSchema),
+    resolver: zodResolver(schema),
     defaultValues: {
       titre: etape.titre,
       adresse: etape.adresse,
       texte: etape.texte ?? "",
-      latitude: etape.latitude,
-      longitude: etape.longitude,
-      date: toDateInputValue(etape.date),
+      latitude: String(etape.latitude),
+      longitude: String(etape.longitude),
+      date: toDateInput(etape.date),
     },
   });
 
+  const texteVal = watch("texte") ?? "";
+
+  function buildPayload(initial: Etape, current: FormValues) {
+    const p: any = {};
+    if (current.titre !== initial.titre) p.titre = current.titre;
+    if (current.adresse !== initial.adresse) p.adresse = current.adresse;
+    const txt = current.texte ?? null;
+    if ((initial.texte ?? "") !== (txt ?? "")) p.texte = txt;
+    if (current.date && toDateInput(initial.date) !== current.date) p.date = current.date;
+
+    const latChanged = current.latitude !== String(initial.latitude);
+    const lngChanged = current.longitude !== String(initial.longitude);
+    if (latChanged && current.latitude !== "") p.latitude = Number(current.latitude);
+    if (lngChanged && current.longitude !== "") p.longitude = Number(current.longitude);
+
+    return p;
+  }
+
   async function onSubmit(values: FormValues) {
-    setServerError(null);
-    setLoading(true);
+    setErr(null);
+    setSubmitting(true);
     try {
-      const payload: Record<string, unknown> = {};
-
-      if (values.titre !== etape.titre) payload.titre = values.titre;
-      if (values.adresse !== etape.adresse) payload.adresse = values.adresse;
-      if ((values.texte ?? null) !== (etape.texte ?? null)) payload.texte = values.texte ?? null;
-
-      const latNum = Number(values.latitude);
-      const lngNum = Number(values.longitude);
-      if (latNum !== etape.latitude) payload.latitude = latNum;
-      if (lngNum !== etape.longitude) payload.longitude = lngNum;
-
-      const newDateIso = new Date(values.date!).toISOString();
-      const oldDateIso = new Date(etape.date).toISOString();
-      if (newDateIso !== oldDateIso) payload.date = values.date;
-
-      const res = await fetch(`/api/etapes/${etape.id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
-
-      if (!res.ok) {
-        let msg = "Mise à jour impossible";
-        try {
-          const j = await res.json();
-          msg = j?.error ? (typeof j.error === "string" ? j.error : JSON.stringify(j.error)) : msg;
-        } catch {}
-        throw new Error(msg);
+      const payload = buildPayload(etape, values);
+      if (Object.keys(payload).length === 0) {
+        router.replace(`/etapes/${etape.id}`);
+        return;
       }
-
-      reset(values, { keepDirty: false });
-      router.push(`/etapes/${etape.id}`);
+      await updateEtape(etape.id, payload);
+      router.replace(`/etapes/${etape.id}`);
       router.refresh();
     } catch (e: any) {
-      setServerError(e?.message ?? "Erreur inconnue");
-    } finally {
-      setLoading(false);
+      setErr(e?.message ?? "Enregistrement impossible");
+      setSubmitting(false);
     }
   }
 
   async function onDelete() {
     if (!confirm("Supprimer définitivement cette étape ?")) return;
-    setServerError(null);
-    setDeleting(true);
+    setErr(null);
+    setDeleteLoading(true);
     try {
-      const res = await fetch(`/api/etapes/${etape.id}`, { method: "DELETE" });
-      if (!res.ok) {
-        let msg = "Suppression impossible";
-        try {
-          const j = await res.json();
-          msg = j?.error ? (typeof j.error === "string" ? j.error : JSON.stringify(j.error)) : msg;
-        } catch {}
-        throw new Error(msg);
-      }
+      await deleteEtape(etape.id);
       router.replace(`/voyages/${voyageId}`);
       router.refresh();
     } catch (e: any) {
-      setServerError(e?.message ?? "Erreur inconnue");
-    } finally {
-      setDeleting(false);
+      setErr(e?.message ?? "Suppression impossible");
+      setDeleteLoading(false);
     }
   }
 
+  const inputBase =
+    "mt-1 w-full rounded-xl border border-gray-200 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-orange-300";
+
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="grid grid-cols-1 gap-4">
-      {/* ... champs comme avant ... */}
-      <div>
-        <label className="block text-sm font-medium text-gray-700">Titre</label>
-        <input
-          type="text"
-          className="mt-1 w-full rounded-xl border border-gray-200 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-orange-500"
-          {...register("titre")}
-        />
-        {errors.titre && <p className="mt-1 text-sm text-red-600">{errors.titre.message as string}</p>}
-      </div>
-
-      <div>
-        <label className="block text-sm font-medium text-gray-700">Adresse</label>
-        <input
-          type="text"
-          className="mt-1 w-full rounded-xl border border-gray-200 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-orange-500"
-          {...register("adresse")}
-        />
-        {errors.adresse && <p className="mt-1 text-sm text-red-600">{errors.adresse.message as string}</p>}
-      </div>
-
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+    <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+      <header className="flex items-start justify-between">
         <div>
-          <label className="block text-sm font-medium text-gray-700">Date</label>
-          <input
-            type="date"
-            className="mt-1 w-full rounded-xl border border-gray-200 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-orange-500"
-            {...register("date")}
-          />
-          {errors.date && <p className="mt-1 text-sm text-red-600">{errors.date.message as string}</p>}
+          <h1 className="text-xl sm:text-2xl font-semibold text-[#E63946]">Modifier l’étape</h1>
+          <p className="text-xs text-gray-500">{etape.titre} · </p>
         </div>
 
-        <div>
-          <label className="block text-sm font-medium text-gray-700">Latitude</label>
-          <input
-            type="number"
-            step="any"
-            min={-90}
-            max={90}
-            className="mt-1 w-full rounded-xl border border-gray-200 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-orange-500"
-            {...register("latitude", { valueAsNumber: true })}
-          />
-          {errors.latitude && <p className="mt-1 text-sm text-red-600">{errors.latitude.message as string}</p>}
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => router.replace(`/etapes/${etape.id}`)}
+            className="rounded-xl border border-orange-200 bg-white px-4 py-2 text-sm text-gray-700 hover:bg-orange-50"
+          >
+            Annuler
+          </button>
+          <button
+            type="submit"
+            disabled={submitting}
+            className="inline-flex items-center gap-2 rounded-xl bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 text-sm font-medium shadow-sm disabled:opacity-60"
+          >
+            {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+            {submitting ? "Enregistrement..." : "Enregistrer"}
+          </button>
         </div>
+      </header>
 
-        <div>
-          <label className="block text-sm font-medium text-gray-700">Longitude</label>
-          <input
-            type="number"
-            step="any"
-            min={-180}
-            max={180}
-            className="mt-1 w-full rounded-xl border border-gray-200 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-orange-500"
-            {...register("longitude", { valueAsNumber: true })}
-          />
-          {errors.longitude && <p className="mt-1 text-sm text-red-600">{errors.longitude.message as string}</p>}
+      {err && (
+        <div className="rounded-xl border border-red-200 bg-red-50 text-red-800 px-4 py-3 text-sm">
+          {err}
         </div>
-      </div>
-
-      <div>
-        <label className="block text-sm font-medium text-gray-700">Notes</label>
-        <textarea
-          rows={4}
-          className="mt-1 w-full rounded-xl border border-gray-200 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-orange-500"
-          {...register("texte")}
-        />
-        {errors.texte && <p className="mt-1 text-sm text-red-600">{errors.texte.message as string}</p>}
-      </div>
-
-      {serverError && (
-        <div className="rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700">{serverError}</div>
       )}
 
-      <div className="mt-2 flex flex-wrap items-center gap-3">
-        <button
-          type="submit"
-          disabled={loading || !isDirty}
-          className="inline-flex items-center justify-center rounded-xl bg-orange-500 px-4 py-2 text-white text-sm font-medium shadow-sm hover:bg-orange-600 disabled:opacity-50"
-        >
-          {loading ? "Enregistrement..." : "Enregistrer"}
-        </button>
+      <section className="rounded-2xl bg-white border border-orange-100 shadow p-4">
+        <h2 className="font-semibold text-[#E63946] mb-3 flex items-center gap-2">
+          <FileText className="h-4 w-4" /> Informations
+        </h2>
 
-        <button
-          type="button"
-          onClick={() => history.back()}
-          className="inline-flex items-center justify-center rounded-xl bg-gray-100 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-200"
-        >
-          Annuler
-        </button>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700">Titre</label>
+            <input {...register("titre")} className={inputBase} />
+            {errors.titre && <p className="text-xs text-red-600 mt-1">{errors.titre.message as string}</p>}
+          </div>
 
-        <div className="ml-auto" />
+          <div>
+            <label className="block text-sm font-medium text-gray-700">Date</label>
+            <div className="relative">
+              <input type="date" {...register("date")} className={`${inputBase} pr-9`} />
+              <Calendar className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+            </div>
+            {errors.date && <p className="text-xs text-red-600 mt-1">{errors.date.message as string}</p>}
+          </div>
 
-        <button
-          type="button"
-          onClick={onDelete}
-          disabled={deleting}
-          className="inline-flex items-center justify-center rounded-xl bg-red-600 px-4 py-2 text-white text-sm font-medium shadow-sm hover:bg-red-700 disabled:opacity-50"
-        >
-          {deleting ? "Suppression..." : "Supprimer"}
-        </button>
-      </div>
+          <div className="md:col-span-2">
+            <label className="block text-sm font-medium text-gray-700">Adresse</label>
+            <div className="relative">
+              <input {...register("adresse")} className={`${inputBase} pr-9`} />
+              <MapPin className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+            </div>
+            {errors.adresse && <p className="text-xs text-red-600 mt-1">{errors.adresse.message as string}</p>}
+          </div>
+
+          <div className="md:col-span-2">
+            <label className="block text-sm font-medium text-gray-700">Notes personnelles</label>
+            <textarea rows={5} {...register("texte")} className={inputBase} />
+            <div className="flex justify-between text-xs mt-1">
+              <span className="text-gray-500">Conseil : garde tes souvenirs bruts 😉</span>
+              <span className="text-gray-400">{(texteVal?.length ?? 0)}/2000</span>
+            </div>
+            {errors.texte && <p className="text-xs text-red-600 mt-1">{errors.texte.message as string}</p>}
+          </div>
+        </div>
+      </section>
+
+      <section className="rounded-2xl bg-white border border-orange-100 shadow p-4">
+        <h2 className="font-semibold text-[#E63946] mb-3 flex items-center gap-2">
+          <MapPinned className="h-4 w-4" /> Localisation
+        </h2>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700">Latitude</label>
+            <input inputMode="decimal" placeholder="48.8584" {...register("latitude")} className={inputBase} />
+            {errors.latitude && <p className="text-xs text-red-600 mt-1">{errors.latitude.message as string}</p>}
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700">Longitude</label>
+            <input inputMode="decimal" placeholder="2.2945" {...register("longitude")} className={inputBase} />
+            {errors.longitude && <p className="text-xs text-red-600 mt-1">{errors.longitude.message as string}</p>}
+          </div>
+        </div>
+
+        <p className="text-[11px] text-gray-500 mt-2">
+          Astuce : si tu modifies les coordonnées, la carte du voyage zoomera sur cette étape.
+        </p>
+      </section>
+
+      <section className="rounded-2xl bg-red-50 border border-red-200 p-4">
+        <div className="flex items-center justify-between">
+          <div>
+            <h3 className="font-semibold text-red-700 flex items-center gap-2">
+              <Trash2 className="h-4 w-4" />
+              Supprimer l’étape
+            </h3>
+            <p className="text-xs text-red-600 mt-1">
+              Cette action est irréversible. Les médias liés seront dissociés.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={onDelete}
+            disabled={deleteLoading}
+            className="inline-flex items-center gap-2 rounded-xl bg-red-600 hover:bg-red-700 text-white px-4 py-2 text-sm font-medium shadow-sm disabled:opacity-60"
+          >
+            {deleteLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
+            Supprimer
+          </button>
+        </div>
+      </section>
+
+      <footer className="flex items-center justify-between text-xs text-gray-500">
+        <span>{isDirty ? "Modifications non enregistrées" : "Tout est à jour"}</span>
+        <span>Étape {etape.id}</span>
+      </footer>
     </form>
   );
 }
