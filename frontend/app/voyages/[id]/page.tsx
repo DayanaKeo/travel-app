@@ -1,7 +1,8 @@
 // app/voyages/[id]/page.tsx
 import { headers, cookies } from "next/headers";
 import { notFound } from "next/navigation";
-import { MapPinned, CalendarDays, Link, PlusSquareIcon } from "lucide-react";
+import Link from "next/link";
+import { MapPinned, CalendarDays, PlusSquareIcon, Edit3, Eye, EyeOff, Clock } from "lucide-react";
 
 export const dynamic = "force-dynamic";
 
@@ -90,44 +91,96 @@ export default async function VoyageDetailPage({
   const { data: voyage }: { data: Voyage } = (await voyageRes.json()) as any;
   const { data: etapes }: { data: Etape[] } = (await etapesRes.json()) as any;
 
+  const dateRange = `${new Date(voyage.dateDebut).toLocaleDateString()} → ${new Date(
+    voyage.dateFin
+  ).toLocaleDateString()}`;
+
+  const msPerDay = 24 * 60 * 60 * 1000;
+  const durationDays =
+    Math.max(1, Math.round((new Date(voyage.dateFin).getTime() - new Date(voyage.dateDebut).getTime()) / msPerDay) + 1);
+
+  const cover =
+    typeof voyage.image === "string" && /^https?:\/\//i.test(voyage.image.trim()) ? voyage.image.trim() : null;
+
   return (
     <div className="min-h-screen bg-[#FFF5F5]">
       <div className="max-w-5xl mx-auto px-4 sm:px-6 py-8 space-y-6">
-        <header className="flex items-start justify-between gap-4">
-          <div className="flex justify-end">
-            <a
-              href={`/etapes/new?voyageId=${voyageId}`}
-              className="inline-flex items-center gap-2 rounded-xl bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 text-sm font-medium shadow-sm"
-            >
-              <PlusSquareIcon className="h-4 w-4" /> Ajouter une étape
-            </a>
-          </div>
-          <div>
-            <h1 className="text-2xl sm:text-3xl font-semibold text-[#E63946]">{voyage.titre}</h1>
-            <p className="text-sm text-gray-500 flex items-center gap-2">
-              <CalendarDays size={16} />
-              {new Date(voyage.dateDebut).toLocaleDateString()} →{" "}
-              {new Date(voyage.dateFin).toLocaleDateString()}
-              <span className="ml-3 inline-flex items-center gap-1">
-                <MapPinned size={16} /> {etapes.length} étape{etapes.length > 1 ? "s" : ""}
-              </span>
-            </p>
-          </div>
-          {voyage.isPublic && (
-            <span className="text-xs bg-green-500 text-white px-2 py-1 rounded-full h-fit">
-              Public
-            </span>
-          )}
-        </header>
+        {cover ? (
+          <section className="relative w-full h-64 sm:h-80 overflow-hidden rounded-2xl border border-orange-100 shadow">
+            <img
+              src={cover}
+              alt={voyage.titre}
+              className="absolute inset-0 w-full h-full object-cover"
+              loading="eager"
+            />
+            <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/25 to-transparent" />
 
-        {voyage.image && (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src={voyage.image}
-            alt={voyage.titre}
-            className="w-full h-56 object-cover rounded-2xl border border-orange-100 shadow"
-          />
+            <span className="absolute top-3 right-3 inline-flex items-center gap-1.5 text-xs bg-white/90 text-gray-900 px-2 py-1 rounded-full shadow border border-orange-100">
+              {voyage.isPublic ? <Eye className="h-4 w-4 text-green-600" /> : <EyeOff className="h-4 w-4 text-gray-500" />}
+              {voyage.isPublic ? "Public" : "Privé"}
+            </span>
+
+            <div className="absolute bottom-3 left-4 right-4">
+              <h1 className="text-white text-2xl sm:text-3xl font-semibold drop-shadow">{voyage.titre}</h1>
+              <p className="mt-1 text-white/90 text-sm flex flex-wrap items-center gap-3 drop-shadow">
+                <span className="inline-flex items-center gap-1.5">
+                  <CalendarDays className="h-4 w-4" /> {dateRange}
+                </span>
+                <span className="inline-flex items-center gap-1.5">
+                  <MapPinned className="h-4 w-4" /> {etapes.length} étape{etapes.length > 1 ? "s" : ""}
+                </span>
+              </p>
+            </div>
+          </section>
+        ) : (
+          <header className="flex items-start justify-between gap-4">
+            <div>
+              <h1 className="text-2xl sm:text-3xl font-semibold text-[#E63946]">{voyage.titre}</h1>
+              <p className="text-sm text-gray-500 flex items-center gap-2">
+                <CalendarDays size={16} /> {dateRange}
+                <span className="ml-3 inline-flex items-center gap-1">
+                  <MapPinned size={16} /> {etapes.length} étape{etapes.length > 1 ? "s" : ""}
+                </span>
+              </p>
+            </div>
+            <span className="text-xs bg-white border border-orange-200 text-gray-700 px-2 py-1 rounded-full h-fit inline-flex items-center gap-1.5">
+              {voyage.isPublic ? <Eye className="h-4 w-4 text-green-600" /> : <EyeOff className="h-4 w-4 text-gray-500" />}
+              {voyage.isPublic ? "Public" : "Privé"}
+            </span>
+          </header>
         )}
+
+        {/* Barre d’actions sticky (UNIQUE endroit avec les boutons) */}
+        <div className="sticky top-3 z-10">
+          <div className="bg-white/90 backdrop-blur rounded-2xl border border-orange-100 shadow px-4 py-3 flex items-center justify-between">
+            <div className="text-xs text-gray-600 flex items-center gap-3">
+              <span className="inline-flex items-center gap-1.5">
+                <CalendarDays className="h-4 w-4" /> {dateRange}
+              </span>
+              <span className="inline-flex items-center gap-1.5">
+                <Clock className="h-4 w-4" /> {durationDays} jour{durationDays > 1 ? "s" : ""}
+              </span>
+              <span className="inline-flex items-center gap-1.5">
+                <MapPinned className="h-4 w-4" /> {etapes.length} étape{etapes.length > 1 ? "s" : ""}
+              </span>
+            </div>
+            <div className="flex items-center gap-2">
+              <a
+                href={`/etapes/new?voyageId=${voyageId}`}
+                className="inline-flex items-center gap-2 rounded-xl bg-orange-500 hover:bg-orange-600 text-white px-3 py-1.5 text-xs font-medium shadow-sm"
+              >
+                <PlusSquareIcon className="h-4 w-4" /> Ajouter une étape
+              </a>
+
+              <a
+                href={`/voyages/${voyageId}/edit`}
+                className="inline-flex items-center gap-2 rounded-xl bg-white hover:bg-orange-50 text-[#E63946] px-3 py-1.5 text-xs font-medium shadow-sm border border-orange-100"
+              >
+                <Edit3 className="h-4 w-4" /> Modifier le voyage
+              </a>
+            </div>
+          </div>
+        </div>
 
         <section className="grid md:grid-cols-3 gap-6">
           <div className="md:col-span-2 space-y-4">
@@ -140,31 +193,50 @@ export default async function VoyageDetailPage({
 
             <article className="bg-white rounded-2xl p-4 border border-orange-100 shadow">
               <h2 className="font-semibold text-[#E63946] mb-3">Étapes</h2>
-              <ul className="space-y-3">
-                {etapes.map((e) => (
-                  <li key={e.id} className="border border-orange-100 rounded-xl p-3">
-                    <a href={`/etapes/${e.id}`}>
-                      <p className="font-medium text-[#E63946]">{e.titre}</p>
-                      <p className="text-xs text-gray-500">
-                        {new Date(e.date).toLocaleDateString()} · {e.adresse}
-                      </p>
-                      {e.texte && <p className="text-sm text-gray-700 mt-1">{e.texte}</p>}
-                    </a>
-                  </li>
-                ))}
-                {etapes.length === 0 && (
-                  <li className="text-gray-500 text-sm">Aucune étape pour le moment.</li>
-                )}
-              </ul>
+
+              {etapes.length === 0 ? (
+                <div className="rounded-xl border border-orange-100 bg-orange-50/50 p-4 text-sm text-gray-700">
+                  Aucune étape pour le moment.
+                  <Link
+                    href={`/etapes/new?voyageId=${voyageId}`}
+                    className="ml-2 underline decoration-orange-400 hover:text-[#E63946]"
+                  >
+                    Créer la première étape
+                  </Link>
+                  .
+                </div>
+              ) : (
+                // Timeline
+                <ol className="relative border-l-2 border-orange-200 pl-4 space-y-4">
+                  {etapes.map((e) => (
+                    <li key={e.id} className="relative">
+                      <span className="absolute -left-[9px] top-1 h-3 w-3 rounded-full bg-[#E63946] ring-4 ring-[#FFF5F5]" />
+                      <Link href={`/etapes/${e.id}`} className="block rounded-xl hover:bg-orange-50/50 p-3 -ml-3">
+                        <p className="text-xs text-gray-500">
+                          {new Date(e.date).toLocaleDateString()} · {e.adresse}
+                        </p>
+                        <p className="font-medium text-[#E63946]">{e.titre}</p>
+                        {e.texte && <p className="text-sm text-gray-700 mt-1 line-clamp-3">{e.texte}</p>}
+                      </Link>
+                    </li>
+                  ))}
+                </ol>
+              )}
             </article>
           </div>
 
           <aside className="space-y-4">
             <div className="bg-white rounded-2xl p-4 border border-orange-100 shadow">
               <h3 className="font-semibold text-[#E63946] mb-2">Infos</h3>
-              <p className="text-sm text-gray-600">Crée le : {new Date(voyage.createdAt).toLocaleDateString()}</p>
+              <p className="text-sm text-gray-600">Créé le : {new Date(voyage.createdAt).toLocaleDateString()}</p>
               <p className="text-sm text-gray-600">
-                Visibilité: {voyage.isPublic ? "Public" : "Privé"}
+                Visibilité : {voyage.isPublic ? "Public" : "Privé"}
+              </p>
+              <p className="text-sm text-gray-600">
+                Durée : {durationDays} jour{durationDays > 1 ? "s" : ""}
+              </p>
+              <p className="text-sm text-gray-600">
+                Étapes : {etapes.length}
               </p>
             </div>
           </aside>
