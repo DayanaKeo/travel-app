@@ -2,12 +2,12 @@ import { z } from "zod";
 
 const title = z.string().min(3, "Titre trop court").max(150, "Titre trop long");
 const description = z.string().max(5000, "Description trop longue").optional().nullable();
-const isPublic = z.coerce.boolean().optional(); // si passé en string depuis un form
+const isPublic = z.coerce.boolean().optional();
 export const imageUrl = z
   .string()
   .max(1024)
   .refine((s) => {
-    if (s.trim() === "") return true; // sera mappé en undefined
+    if (s.trim() === "") return true;
     try {
       const u = new URL(s);
       return u.protocol === "http:" || u.protocol === "https:";
@@ -18,7 +18,6 @@ export const imageUrl = z
   .transform((s) => (s.trim() === "" ? undefined : s))
   .optional();
 
-// Dates au format ISO ou Date, avec normalisation en Date
 const isoOrDate = z.union([z.string(), z.date()]).transform((v, ctx) => {
   const d = v instanceof Date ? v : new Date(v);
   if (Number.isNaN(d.getTime())) {
@@ -57,6 +56,7 @@ export const updateVoyageSchema = z
     dateFin: isoOrDate.optional(),
     isPublic: isPublic,
     image: imageUrl,
+    removeCover: z.coerce.boolean().optional().default(false),
   })
   .refine(
     (data) => {
