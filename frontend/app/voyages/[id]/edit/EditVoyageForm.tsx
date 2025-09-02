@@ -6,11 +6,14 @@ import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
-  createVoyageJSON,
-  createVoyageWithCover,
+  updateVoyageJSON,
+  updateVoyageWithCover,
+  type Voyage,
 } from "@/app/services/voyages.client";
 import {
   CalendarDays,
+  Eye,
+  EyeOff,
   Image as ImageIcon,
   Save,
   Loader2,
@@ -25,10 +28,11 @@ const MAX_MB = 10;
 const MIN_W = 1200;
 const MIN_H = 675;
 
-function toDateInput(d = new Date()) {
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, "0");
-  const day = String(d.getDate()).padStart(2, "0");
+function toDateInput(d: string | Date) {
+  const dd = new Date(d);
+  const y = dd.getFullYear();
+  const m = String(dd.getMonth() + 1).padStart(2, "0");
+  const day = String(dd.getDate()).padStart(2, "0");
   return `${y}-${m}-${day}`;
 }
 
@@ -37,6 +41,7 @@ function daysBetween(d1: string, d2: string) {
   const b = new Date(d2);
   if (Number.isNaN(a.getTime()) || Number.isNaN(b.getTime())) return null;
   const msPerDay = 24 * 60 * 60 * 1000;
+  // +1 pour inclure le jour de début
   return Math.max(1, Math.round((b.getTime() - a.getTime()) / msPerDay) + 1);
 }
 
@@ -47,7 +52,8 @@ const schema = z
     dateDebut: z.string().min(4, "Date invalide"),
     dateFin: z.string().min(4, "Date invalide"),
     isPublic: z.coerce.boolean().optional().default(false),
-    cover: z.any().optional().nullable(),
+    cover: z.any().optional().nullable(), // FileList
+    removeCover: z.coerce.boolean().optional().default(false),
   })
   .superRefine((v, ctx) => {
     const d1 = new Date(v.dateDebut);
@@ -63,67 +69,76 @@ const schema = z
 
 type FormValues = z.input<typeof schema>;
 
-export default function NewVoyageForm() {
-  const router = useRouter();
 
+export default function EditVoyageForm({ voyage }: { voyage: Voyage }) {
+  const router = useRouter();
   const [submitting, setSubmitting] = React.useState(false);
   const [err, setErr] = React.useState<string | null>(null);
   const [dropActive, setDropActive] = React.useState(false);
-  const [preview, setPreview] = React.useState<string | null>(null);
+  const [preview, setPreview] = React.useState<string | null>(voyage.image ?? null);
   const [coverError, setCoverError] = React.useState<string | null>(null);
-
   const fileInputRef = React.useRef<HTMLInputElement>(null);
+
 
   const {
     register,
     handleSubmit,
     watch,
-    formState: { errors, isDirty },
-    setValue,
+    formState: { errors, isDirty, dirtyFields },
     getValues,
+    setValue,
     reset,
+    trigger,
   } = useForm<FormValues>({
     resolver: zodResolver(schema),
     defaultValues: {
-      titre: "",
-      description: "",
-      dateDebut: toDateInput(),
-      dateFin: toDateInput(),
-      isPublic: false,
+      titre: voyage.titre,
+      description: voyage.description ?? "",
+      dateDebut: toDateInput(voyage.dateDebut),
+      dateFin: toDateInput(voyage.dateFin),
+      isPublic: voyage.isPublic,
       cover: null,
+      removeCover: false,
     },
   });
 
   const coverFileList = watch("cover") as unknown as FileList | undefined;
+  const removeCover = watch("removeCover");
   const wDateDebut = watch("dateDebut");
   const wDateFin = watch("dateFin");
   const duration = daysBetween(wDateDebut, wDateFin);
-  const descVal = watch("description") ?? "";
 
+  // ====== Preview/validation image (type, poids, dimensions) ======
   React.useEffect(() => {
     let revoked: string | null = null;
     async function validatePreview() {
       setCoverError(null);
+
+      if (removeCover) {
+        setPreview(null);
+        return;
+      }
       const f = coverFileList?.[0];
       if (!f) {
-        setPreview(null);
+        // pas de nouveau fichier → garder l’existant
+        setPreview(voyage.image ?? null);
         return;
       }
 
       if (!ACCEPT_IMG.includes(f.type)) {
         setCoverError("Formats acceptés : JPG, PNG, WEBP, GIF.");
-        setPreview(null);
+        setPreview(voyage.image ?? null);
         return;
       }
       if (f.size > MAX_MB * 1024 * 1024) {
         setCoverError(`Fichier trop lourd (max ${MAX_MB} Mo).`);
-        setPreview(null);
+        setPreview(voyage.image ?? null);
         return;
       }
 
+      // Vérifie dimensions minimales
       const blobUrl = URL.createObjectURL(f);
       revoked = blobUrl;
-
       const ok = await new Promise<boolean>((resolve) => {
         const img = new Image();
         img.onload = () => resolve(img.width >= MIN_W && img.height >= MIN_H);
@@ -133,7 +148,7 @@ export default function NewVoyageForm() {
 
       if (!ok) {
         setCoverError(`Image trop petite (min ${MIN_W}×${MIN_H}px, 16:9 recommandé).`);
-        setPreview(null);
+        setPreview(voyage.image ?? null);
         return;
       }
 
@@ -144,13 +159,16 @@ export default function NewVoyageForm() {
     return () => {
       if (revoked) URL.revokeObjectURL(revoked);
     };
-  }, [coverFileList]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [coverFileList, removeCover, voyage.image]);
 
+  // ====== Raccourci clavier Ctrl+S ======
   React.useEffect(() => {
     function onKey(e: KeyboardEvent) {
       const mac = navigator.platform.toLowerCase().includes("mac");
       if ((mac ? e.metaKey : e.ctrlKey) && e.key.toLowerCase() === "s") {
         e.preventDefault();
+        // on valide et soumet si possible
         handleSubmit(onSubmit)();
       }
     }
@@ -168,23 +186,57 @@ export default function NewVoyageForm() {
     return () => window.removeEventListener("beforeunload", beforeUnload);
   }, [isDirty]);
 
+  function buildPayload(initial: Voyage, current: FormValues) {
+    const p: any = {};
+    if (current.titre !== initial.titre) p.titre = current.titre;
+    if ((current.description ?? "") !== (initial.description ?? "")) p.description = current.description ?? null;
+    if (toDateInput(initial.dateDebut!) !== current.dateDebut) p.dateDebut = current.dateDebut;
+    if (toDateInput(initial.dateFin!) !== current.dateFin) p.dateFin = current.dateFin;
+    if (Boolean(initial.isPublic) !== Boolean(current.isPublic)) p.isPublic = Boolean(current.isPublic);
+    if (current.removeCover) p.removeCover = true;
+    return p;
+  }
+
+  async function onSubmit(values: FormValues) {
+    setErr(null);
+    setSubmitting(true);
+    try {
+      const payload = buildPayload(voyage, values);
+      const file = (values.cover as unknown as FileList | undefined)?.[0] ?? null;
+
+      if (file) {
+        const { data } = await updateVoyageWithCover(voyage.id, { ...payload, cover: file });
+        router.replace(`/voyages/${data.id}`);
+      } else {
+        const { data } = await updateVoyageJSON(voyage.id, payload);
+        router.replace(`/voyages/${data.id}`);
+      }
+      router.refresh();
+    } catch (e: any) {
+      setErr(e?.message ?? "Mise à jour impossible");
+      setSubmitting(false);
+    }
+  }
+
   function swapDates() {
     const a = getValues("dateDebut");
     const b = getValues("dateFin");
     setValue("dateDebut", b, { shouldDirty: true });
     setValue("dateFin", a, { shouldDirty: true });
+    trigger(["dateDebut", "dateFin"]);
   }
 
-  function resetForm() {
+  function resetChanges() {
     reset({
-      titre: "",
-      description: "",
-      dateDebut: toDateInput(),
-      dateFin: toDateInput(),
-      isPublic: false,
+      titre: voyage.titre,
+      description: voyage.description ?? "",
+      dateDebut: toDateInput(voyage.dateDebut),
+      dateFin: toDateInput(voyage.dateFin),
+      isPublic: voyage.isPublic,
       cover: null,
+      removeCover: false,
     });
-    setPreview(null);
+    setPreview(voyage.image ?? null);
     setCoverError(null);
     setErr(null);
   }
@@ -198,77 +250,63 @@ export default function NewVoyageForm() {
     const file = files[0];
     const dt = new DataTransfer();
     dt.items.add(file);
-    setValue("cover", dt.files as any, { shouldDirty: true });
-  }
-
-  async function onSubmit(values: FormValues) {
-    setErr(null);
-    setSubmitting(true);
-    try {
-      const base = {
-        titre: values.titre,
-        description: values.description || null,
-        dateDebut: values.dateDebut,
-        dateFin: values.dateFin,
-        isPublic: Boolean(values.isPublic),
-      };
-
-      const file = (values.cover as unknown as FileList | undefined)?.[0] ?? null;
-
-      if (file) {
-        const { data } = await createVoyageWithCover({ ...base, cover: file });
-        router.replace(`/voyages/${data.id}`);
-      } else {
-        const { data } = await createVoyageJSON(base);
-        router.replace(`/voyages/${data.id}`);
-      }
-      router.refresh();
-    } catch (e: any) {
-      setErr(e?.message ?? "Création impossible");
-      setSubmitting(false);
-    }
+    const fl = dt.files;
+    setValue("cover", fl as any, { shouldDirty: true });
   }
 
   const inputBase =
     "mt-1 w-full rounded-xl border border-gray-200 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-orange-300";
 
-  const canSave = !submitting && !coverError;
+  const canSave = isDirty && !submitting && !coverError;
+
+  const hasAnyError =
+    !!errors.titre ||
+    !!errors.dateDebut ||
+    !!errors.dateFin ||
+    !!errors.description ||
+    !!coverError ||
+    !!err;
+
+  const descVal = watch("description") ?? "";
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+    <form onSubmit={handleSubmit(onSubmit)} className="space-y-6" aria-describedby={hasAnyError ? "form-errors" : undefined}>
       <header className="flex items-start justify-between">
         <div>
-          <h2 className="text-xl sm:text-2xl font-semibold text-[#E63946]">Nouveau voyage</h2>
-          <p className="text-xs text-gray-500">Renseigne les infos de base et ajoute une couverture (optionnel).</p>
+          <h2 className="text-xl sm:text-2xl font-semibold text-[#E63946]">Modifier le voyage</h2>
+          <p className="text-xs text-gray-500">{voyage.titre}</p>
         </div>
 
         <div className="flex items-center gap-2">
           <button
             type="button"
-            onClick={resetForm}
+            onClick={resetChanges}
             className="inline-flex items-center gap-2 rounded-xl border border-orange-200 bg-white px-4 py-2 text-sm text-gray-700 hover:bg-orange-50"
-            title="Réinitialiser le formulaire"
+            title="Réinitialiser les changements"
           >
             <RotateCcw className="h-4 w-4" />
             Réinitialiser
           </button>
+
           <button
             type="submit"
             disabled={!canSave}
             className="inline-flex items-center gap-2 rounded-xl bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 text-sm font-medium shadow-sm disabled:opacity-50"
+            aria-disabled={!canSave}
           >
             {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-            {submitting ? "Création..." : "Créer (⌘/Ctrl+S)"}
+            {submitting ? "Enregistrement..." : "Enregistrer (⌘/Ctrl+S)"}
           </button>
         </div>
       </header>
 
       {(err || coverError) && (
-        <div className="rounded-xl border border-red-200 bg-red-50 text-red-800 px-4 py-3 text-sm">
+        <div id="form-errors" className="rounded-xl border border-red-200 bg-red-50 text-red-800 px-4 py-3 text-sm">
           {err ?? coverError}
         </div>
       )}
 
+      {/* Section Infos */}
       <section className="rounded-2xl bg-white border border-orange-100 shadow p-4">
         <h3 className="font-semibold text-[#E63946] mb-3 flex items-center gap-2">
           <FileText className="h-4 w-4" /> Informations
@@ -284,8 +322,16 @@ export default function NewVoyageForm() {
           <div>
             <span className="block text-sm font-medium text-gray-700">Visibilité</span>
             <label className="mt-2 inline-flex items-center gap-2 text-sm">
-              <input type="checkbox" className="rounded border-gray-300" {...register("isPublic")} />
-              Rendre public
+              <input type="checkbox" className="rounded border-gray-300" {...register("isPublic")} aria-label="Rendre public" />
+              {getValues("isPublic") ? (
+                <span className="inline-flex items-center gap-1.5 text-green-700">
+                  <Eye className="h-4 w-4" /> Public
+                </span>
+              ) : (
+                <span className="inline-flex items-center gap-1.5 text-gray-700">
+                  <EyeOff className="h-4 w-4" /> Privé
+                </span>
+              )}
             </label>
           </div>
 
@@ -327,10 +373,10 @@ export default function NewVoyageForm() {
           </div>
 
           <div className="md:col-span-2">
-            <label className="block text-sm font-medium text-gray-700" htmlFor="description">Description (optionnel)</label>
+            <label className="block text-sm font-medium text-gray-700" htmlFor="description">Description</label>
             <textarea id="description" rows={5} {...register("description")} className={inputBase} />
             <div className="flex justify-between text-xs mt-1">
-              <span className="text-gray-500">Raconte l’objectif du voyage, les idées d’étapes, etc.</span>
+              <span className="text-gray-500">Raconte ton itinéraire, tes envies, etc.</span>
               <span className="text-gray-400">{(descVal?.length ?? 0)}/2000</span>
             </div>
             {errors.description && (
@@ -342,7 +388,7 @@ export default function NewVoyageForm() {
 
       <section className="rounded-2xl bg-white border border-orange-100 shadow p-4">
         <h3 className="font-semibold text-[#E63946] mb-3 flex items-center gap-2">
-          <ImageIcon className="h-4 w-4" /> Couverture (optionnel)
+          <ImageIcon className="h-4 w-4" /> Couverture
         </h3>
 
         <div
@@ -353,16 +399,16 @@ export default function NewVoyageForm() {
           }}
           onDragLeave={() => setDropActive(false)}
           onDrop={onDrop}
-          onClick={() => fileInputRef.current?.click()}
+          onClick={() => fileInputRef.current?.click()}                 
           className={`rounded-xl border-2 border-dashed ${
             dropActive ? "border-[#E63946] bg-orange-50/50" : "border-gray-300"
-          } p-4 transition-colors cursor-pointer`}
+          } p-4 transition-colors cursor-pointer`}                      
           role="button"
           tabIndex={0}
           onKeyDown={(e) => {
             if (e.key === "Enter" || e.key === " ") {
               e.preventDefault();
-              fileInputRef.current?.click();
+              fileInputRef.current?.click();                            
             }
           }}
           aria-label="Déposer une image de couverture ou cliquer pour sélectionner"
@@ -395,11 +441,10 @@ export default function NewVoyageForm() {
                     id="cover-input"
                     type="file"
                     accept="image/*"
-                    capture="environment"
                     {...reg}
                     ref={(el) => {
-                      reg.ref(el);
-                      fileInputRef.current = el!;
+                      reg.ref(el); 
+                      fileInputRef.current = el;
                     }}
                     className="sr-only"
                   />
@@ -409,32 +454,18 @@ export default function NewVoyageForm() {
           </div>
         </div>
 
-        {(coverFileList?.[0]) && (
-          <div className="mt-3 inline-flex items-center gap-2 rounded-full border border-orange-200 bg-white px-3 py-1.5 text-xs">
-            <span className="font-medium text-gray-700">{coverFileList[0].name}</span>
-            <span className="text-gray-400">{(coverFileList[0].size / (1024 * 1024)).toFixed(1)} Mo</span>
-            <button
-              type="button"
-              onClick={() => setValue("cover", null as any, { shouldDirty: true })}
-              className="ml-1 rounded-full bg-orange-50 hover:bg-orange-100 text-[#E63946] px-2 py-0.5"
-              title="Retirer le fichier"
-            >
-              Retirer
-            </button>
-          </div>
-        )}
 
-        {preview && (
+        {preview && !removeCover && (
           <div className="mt-4 relative aspect-[16/9] overflow-hidden rounded-xl border border-orange-100">
             <img src={preview} alt="Aperçu couverture" className="w-full h-full object-cover" />
           </div>
         )}
-
         {coverError && <p className="mt-2 text-xs text-red-600">{coverError}</p>}
       </section>
 
       <footer className="flex items-center justify-between text-xs text-gray-500">
-        <span>{isDirty ? "Modifications non enregistrées" : "Prêt à créer"}</span>
+        <span>{isDirty ? "Modifications non enregistrées" : "Tout est à jour"}</span>
+        <span>Voyage #{voyage.id}</span>
       </footer>
     </form>
   );
