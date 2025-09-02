@@ -61,8 +61,8 @@ export async function POST(req: NextRequest) {
         voyageId: null,
         url: uploaded.secure_url,
         type: mediaType, 
-        takenAt: null,
-         mongoRef: uploaded.public_id,
+        takenAt: uploaded.created_at ? new Date(uploaded.created_at) : null,
+        mongoRef: uploaded.public_id,
       },
     });
 
