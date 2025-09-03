@@ -32,13 +32,47 @@ model User {
   sessions Session[]
   voyages  Voyage[]
 
+   profil       ProfilUser?     @relation("ProfilUserToUser")
+   preferences  PreferenceUser? @relation("PreferenceUserToUser")
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
 
+model ProfilUser {
+  id             Int      @id @default(autoincrement())
+  userId         Int      @unique
+
+  nomComplet     String?
+  telephone      String?
+  localisation   String?
+  languePreferee String?
+  biographie     String?
+  dateNaissance  DateTime?
+  avatarUrl      String?
+  codePays       String?
+
+  user User @relation("ProfilUserToUser", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("profil_user")
+}
+
+model PreferenceUser {
+  id                        Int     @id @default(autoincrement())
+  userId                    Int     @unique
+
+  notificationsEmail        Boolean @default(true)
+  profilPublic              Boolean @default(false)
+  suggestionsIAAutomatiques Boolean @default(true)
+
+  user User @relation("PreferenceUserToUser", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("preference_user")
+}
+
 model Account {
   id                Int     @id @default(autoincrement())
-  userId            Int // <-- INT
+  userId            Int
   type              String
   provider          String
   providerAccountId String
@@ -58,7 +92,7 @@ model Account {
 model Session {
   id           Int      @id @default(autoincrement())
   sessionToken String   @unique
-  userId       Int // <-- INT
+  userId       Int
   expires      DateTime
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -75,7 +109,7 @@ model VerificationToken {
 
 model Voyage {
   id          Int      @id @default(autoincrement())
-  userId      Int // <-- INT (corrigé)
+  userId      Int
   titre       String
   description String?
   dateDebut   DateTime
@@ -128,7 +162,7 @@ model Media {
   url       String
   type      String // "image" | "video"
   takenAt   DateTime?
-  mongoRef  String? // ObjectId en string (doc détaillé côté Mongo)
+  mongoRef  String?
   createdAt DateTime  @default(now())
 
   voyage Voyage? @relation(fields: [voyageId], references: [id], onDelete: SetNull)

@@ -2,7 +2,7 @@ import type { NextAuthOptions } from "next-auth";
 import Credentials from "next-auth/providers/credentials";
 import { PrismaAdapter } from "@auth/prisma-adapter";
 import { prisma } from "./prisma";
-import bcrypt from "bcrypt";
+import bcrypt from "bcryptjs";
 
 export const authOptions: NextAuthOptions = {
   adapter: PrismaAdapter(prisma) as any,
@@ -35,7 +35,7 @@ export const authOptions: NextAuthOptions = {
     async jwt({ token, user }) {
       if (user) {
         token.uid = (user as any).id;
-        token.role = (user as any).role;
+        token.role = (user.role ?? "USER") as "USER" | "ADMIN";
         token.premium = (user as any).premium;
       }
       return token;
@@ -43,10 +43,25 @@ export const authOptions: NextAuthOptions = {
     async session({ session, token }) {
       if (token?.uid && session.user) {
         session.user.id = token.uid as number;
-        session.user.role = token.role as any;
+        session.user.role = (token.role as "USER" | "ADMIN") ?? "USER";
         session.user.premium = token.premium as boolean;
       }
       return session;
     },
   },
 };
+
+export function requireAuth(headers: Headers) {
+  const uid = headers.get("x-user-id");
+  if (!uid) throw new Error("UNAUTHORIZED");
+  return parseInt(uid, 10);
+}
+
+export function requireAdmin(headers: Headers) {
+  const role = headers.get("x-user-role");
+  if (role !== "ADMIN") throw new Error("FORBIDDEN");
+}
+
+export function isAdmin(headers: Headers) {
+  return headers.get("x-user-role") === "ADMIN";
+}
