@@ -48,8 +48,8 @@ export default function ProfilPage() {
 
       <div className="mt-4">
         {tab === "infos" && <InfosTab user={me} onSaved={handleProfilSaved} />}
-        {tab === "stats" && <StatsTab user={me} />}
-        {tab === "prefs" && <PrefsTab pref={me.preferences} onSaved={handlePrefsSaved} />}
+        {tab === "stats" && <StatsTab />}
+        {tab === "prefs" && <PrefsTab me={me} />}
         {tab === "security" && <SecurityTab />}
       </div>
     </div>
