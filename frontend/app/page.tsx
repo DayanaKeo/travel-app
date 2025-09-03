@@ -1,103 +1,181 @@
-import Image from "next/image";
+import Link from "next/link";
 
-export default function Home() {
+export default function HomePage() {
   return (
-    <div className="font-sans grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20">
-      <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="font-mono list-inside list-decimal text-sm/6 text-center sm:text-left">
-          <li className="mb-2 tracking-[-.01em]">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] font-mono font-semibold px-1 py-0.5 rounded">
-              app/page.tsx
-            </code>
-            .
-          </li>
-          <li className="tracking-[-.01em]">
-            Save and see your changes instantly.
-          </li>
-        </ol>
+    <div className="relative">
+      {/* ====== Background global : gradient + blobs ====== */}
+      <div aria-hidden className="pointer-events-none absolute inset-0 -z-10">
+        {/* grand dégradé de marque */}
+        <div className="absolute inset-0 bg-gradient-to-b from-orange-50 via-rose-50 to-white" />
+        {/* blobs doux */}
+        <div className="absolute -top-24 -left-24 w-80 h-80 rounded-full bg-orange-300/30 blur-3xl" />
+        <div className="absolute -bottom-24 -right-24 w-[28rem] h-[28rem] rounded-full bg-red-300/25 blur-3xl" />
+      </div>
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:w-auto"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 w-full sm:w-auto md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
+      {/* ====== HERO ====== */}
+      <section className="mx-auto max-w-6xl px-4 md:px-6 pt-10 md:pt-16 pb-12">
+        <div className="grid md:grid-cols-2 gap-8 items-center">
+          {/* Texte */}
+          <div className="grid gap-5">
+            <span className="inline-flex w-fit items-center gap-2 rounded-full border border-orange-200/70 bg-orange-50/70 px-3 py-1 text-xs text-orange-700">
+              ✨ Nouveau : Partage sécurisé 48h + PIN chiffré
+            </span>
+
+            <h1 className="text-3xl md:text-5xl font-extrabold tracking-tight leading-tight">
+              Votre{" "}
+              <span className="bg-gradient-to-r from-orange-500 via-red-500 to-pink-500 bg-clip-text text-transparent">
+                Carnet de Voyage
+              </span>{" "}
+              numérique
+            </h1>
+
+            <p className="text-neutral-600 text-lg max-w-[560px]">
+              Créez vos voyages, cartes et galeries. Partagez en toute sécurité. Revivez vos souvenirs, partout et sur tous vos appareils.
+            </p>
+
+            <div className="flex items-center gap-3">
+              <Link
+                href="/app"
+                className="px-4 py-2 rounded-full text-white shadow-sm hover:opacity-95 outline-none focus-visible:ring-2 focus-visible:ring-red-400
+                           bg-gradient-to-r from-orange-500 via-red-500 to-pink-500"
+              >
+                Ouvrir l’app
+              </Link>
+              <Link
+                href="/explore"
+                className="px-4 py-2 rounded-full border border-neutral-200 hover:bg-neutral-50 outline-none focus-visible:ring-2 focus-visible:ring-red-400"
+              >
+                Explorer
+              </Link>
+            </div>
+
+            <ul className="text-sm text-neutral-600 grid gap-1.5 pt-1">
+              <li className="flex items-center gap-2">✅ PWA + Desktop (Next.js)</li>
+              <li className="flex items-center gap-2">🔒 Partage sécurisé (lien 48h + PIN)</li>
+              <li className="flex items-center gap-2">🗺️ Cartes interactives (Mapbox/Leaflet)</li>
+            </ul>
+          </div>
+
+          {/* Visuel "glass" */}
+          <div className="relative">
+            <div className="absolute -inset-1 rounded-3xl bg-gradient-to-r from-orange-400/40 via-red-400/40 to-pink-400/40 blur-2xl" />
+            <div className="relative rounded-3xl border border-white/60 bg-white/60 backdrop-blur-xl shadow-xl overflow-hidden ring-1 ring-black/5">
+              <div className="aspect-[16/10] grid place-items-center">
+                <div className="w-full h-full bg-gradient-to-br from-neutral-50 to-neutral-100 grid place-items-center text-neutral-400">
+                  <span>📸 Aperçu de l’application</span>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
-      </main>
-      <footer className="row-start-3 flex gap-[24px] flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
+
+        {/* Bandeau social proof */}
+        <div className="mt-10 grid grid-cols-2 md:grid-cols-4 gap-3">
+          {[
+            ["+12k", "voyages créés"],
+            ["98%", "partages privés"],
+            ["< 2 min", "pour démarrer"],
+            ["#1", "souvenirs centralisés"],
+          ].map(([k, v]) => (
+            <div
+              key={k}
+              className="rounded-2xl bg-white/70 border border-orange-100/60 p-4 text-center shadow-sm"
+            >
+              <div className="text-2xl font-bold bg-gradient-to-r from-orange-500 to-red-500 bg-clip-text text-transparent">
+                {k}
+              </div>
+              <div className="text-xs text-neutral-600">{v}</div>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* ====== FEATURES ====== */}
+      <section className="border-t bg-neutral-50/70">
+        <div className="mx-auto max-w-6xl px-4 md:px-6 py-12 grid md:grid-cols-3 gap-6">
+          {[
+            {
+              t: "Voyages & étapes",
+              d: "Structurez vos trips avec des étapes, dates et adresses géocodées.",
+              i: "🧭",
+              c: "from-orange-500 to-amber-500",
+            },
+            {
+              t: "Galerie médias",
+              d: "Classez vos photos/vidéos par voyage et par étape.",
+              i: "🖼️",
+              c: "from-rose-500 to-red-500",
+            },
+            {
+              t: "Partage sécurisé",
+              d: "Lien temporaire 48h + PIN chiffré (Argon2/bcrypt).",
+              i: "🔒",
+              c: "from-red-500 to-pink-500",
+            },
+          ].map(({ t, d, i, c }) => (
+            <article
+              key={t}
+              className="group relative rounded-2xl bg-white shadow-sm p-5 transition-shadow hover:shadow-md border"
+            >
+              {/* Accent dégradé */}
+              <div className={`absolute top-0 left-0 right-0 h-1 rounded-t-2xl bg-gradient-to-r ${c}`} />
+              <div className="flex items-start gap-3">
+                <div className={`h-10 w-10 grid place-items-center rounded-xl text-lg text-white bg-gradient-to-br ${c}`} aria-hidden>
+                  {i}
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold">{t}</h3>
+                  <p className="text-sm text-neutral-600 mt-1">{d}</p>
+                </div>
+              </div>
+            </article>
+          ))}
+        </div>
+      </section>
+
+      {/* ====== TESTIMONIALS ====== */}
+      <section className="border-t bg-white">
+        <div className="mx-auto max-w-6xl px-4 md:px-6 py-12 grid md:grid-cols-3 gap-6">
+          {[
+            ["Alicia", "Mes souvenirs sont enfin organisés. Le partage privé est top."],
+            ["Benoît", "J’adore la carte interactive : parfait pour revoir l’itinéraire."],
+            ["Chiara", "Upload d’avatar + galerie : simple et efficace !"],
+          ].map(([name, quote]) => (
+            <figure
+              key={name}
+              className="relative rounded-2xl border bg-neutral-50 p-5 overflow-hidden"
+            >
+              <div className="absolute -top-10 -right-10 w-28 h-28 rounded-full bg-gradient-to-br from-orange-200/40 to-red-200/40 blur-2xl" />
+              <blockquote className="text-neutral-700 text-sm relative">{`“${quote}”`}</blockquote>
+              <figcaption className="mt-3 text-xs text-neutral-500 relative">— {name}</figcaption>
+            </figure>
+          ))}
+        </div>
+      </section>
+
+      {/* ====== CTA FINAL ====== */}
+      <section className="border-t">
+        <div className="relative mx-auto max-w-6xl px-4 md:px-6 py-12">
+          <div className="absolute inset-0 -z-10 bg-gradient-to-br from-orange-100/60 via-rose-100/60 to-white" />
+          <div className="grid md:grid-cols-2 gap-6 items-center">
+            <div className="grid gap-2">
+              <h2 className="text-2xl font-bold">Prêt·e à partir ?</h2>
+              <p className="text-neutral-600">
+                Créez votre premier voyage en quelques secondes.
+              </p>
+            </div>
+            <div className="flex md:justify-end">
+              <Link
+                href="/app"
+                className="px-5 py-2.5 rounded-full text-white shadow-sm hover:opacity-95 outline-none focus-visible:ring-2 focus-visible:ring-red-400
+                           bg-gradient-to-r from-orange-500 via-red-500 to-pink-500"
+              >
+                Commencer
+              </Link>
+            </div>
+          </div>
+        </div>
+      </section>
     </div>
   );
 }
