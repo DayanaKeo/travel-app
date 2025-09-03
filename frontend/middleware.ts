@@ -4,9 +4,9 @@ import { getToken } from "next-auth/jwt";
 
 const PUBLIC_API = [
   "/api/auth",
-  "/api/health",            
-  "/api/voyages/public",   
-  "/api/partage/",          
+  "/api/health",
+  "/api/voyages/public",
+  "/api/partage/",
 ];
 
 export async function middleware(req: NextRequest) {
@@ -17,13 +17,16 @@ export async function middleware(req: NextRequest) {
     return NextResponse.next();
   }
 
-  // exige un JWT valide
   const token = await getToken({ req, secret: process.env.NEXTAUTH_SECRET });
   if (!token?.uid) {
     return NextResponse.json({ error: "Non authentifié" }, { status: 401 });
   }
 
-  return NextResponse.next();
+  const res = NextResponse.next();
+  res.headers.set("x-user-id", String(token.uid));
+  res.headers.set("x-user-role", (token.role ?? "USER") as "USER" | "ADMIN"); // "USER" | "ADMIN"
+  res.headers.set("x-user-premium", String(!!token.premium));
+  return res;
 }
 
 export const config = {
