@@ -1,10 +1,14 @@
 "use client";
 import { useUserStats } from "@/hooks/useUserStats";
+import { formatFR } from "@/lib/time";
+
 
 export default function ProfileHeader({ user, isAdmin }: { user:any; isAdmin:boolean }) {
   const stats = useUserStats();
+  const updated = user?.updatedAt ? formatFR(user.updatedAt) : null;
 
   return (
+    
     <div className="bg-white rounded-2xl shadow-sm p-4 md:p-6 flex flex-col md:flex-row items-center gap-4">
       <div className="w-16 h-16 rounded-full bg-gradient-to-br from-orange-400 to-red-500 grid place-items-center text-white text-2xl">
         {user?.profil?.avatarUrl ? (
@@ -35,6 +39,11 @@ export default function ProfileHeader({ user, isAdmin }: { user:any; isAdmin:boo
             <div><span className="font-semibold">{stats.pays}</span> Pays</div>
             <div><span className="font-semibold">{stats.photos}</span> Photos</div>
           </div>
+        )}
+        {updated && (
+          <p className="text-xs text-neutral-500 mt-2">
+            Dernière mise à jour : {updated} (heure France)
+          </p>
         )}
       </div>
 
