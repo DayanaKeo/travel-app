@@ -2,8 +2,10 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireUserFromJwt } from "@/lib/requireUserFromJwt";
 import { getOwnerUserIdByVoyageId } from "@/lib/ownership";
+import { logUsageFromRequest } from "@/lib/audit";
 
 export const runtime = "nodejs";
+const tokenSuffix = (t: string) => String(t).slice(-6);
 
 export async function DELETE(req: NextRequest, ctx: { params: Promise<{ id: string }> }) {
   try {
@@ -24,6 +26,12 @@ export async function DELETE(req: NextRequest, ctx: { params: Promise<{ id: stri
     const updated = await prisma.shareLink.update({
       where: { id: linkId },
       data: { isRevoked: true },
+    });
+
+    await logUsageFromRequest(req, {
+      type: "share.revoke",
+      user_id: userId,
+      meta: { voyageId: link.voyageId, token_suffix: tokenSuffix(link.token) }
     });
 
     return NextResponse.json({ data: updated });
