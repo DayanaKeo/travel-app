@@ -1,15 +1,30 @@
-import mongoose from "mongoose";
+import { MongoClient, Db } from "mongodb";
 
-const MONGODB_URI = process.env.MONGODB_URI!;
-if (!MONGODB_URI) throw new Error("MONGODB_URI manquant");
+const uri = process.env.MONGODB_URI!;
+const dbName = process.env.MONGODB_DB || "travelbook";
 
-let cached = (global as any)._mongoose || { conn: null, promise: null };
+let client: MongoClient | null = null;
+let db: Db | null = null;
 
-export async function dbMongo() {
-  if (cached.conn) return cached.conn;
-  if (!cached.promise) {
-    cached.promise = mongoose.connect(MONGODB_URI).then((m) => m);
+export async function getMongo(): Promise<Db> {
+  if (db) return db;
+
+  if (!client) {
+    client = new MongoClient(uri, {
+      maxPoolSize: 10,   // limite de connexions simultanées
+      retryWrites: true, // sécurité sur les écritures
+    });
   }
-  cached.conn = await cached.promise;
-  return cached.conn;
+
+  
+  await client.connect();
+
+  db = client.db(dbName);
+
+  if (process.env.NODE_ENV === "development") {
+    await db.command({ ping: 1 });
+    console.log(`✅ Connecté à MongoDB : ${dbName}`);
+  }
+
+  return db!;
 }
