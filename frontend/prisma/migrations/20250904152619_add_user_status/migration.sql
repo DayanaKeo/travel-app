@@ -1,0 +1,5 @@
+-- AlterTable
+ALTER TABLE `profil_user` ADD COLUMN `codePays` VARCHAR(191) NULL;
+
+-- AlterTable
+ALTER TABLE `user` ADD COLUMN `status` ENUM('ACTIVE', 'SUSPENDED') NOT NULL DEFAULT 'ACTIVE';
