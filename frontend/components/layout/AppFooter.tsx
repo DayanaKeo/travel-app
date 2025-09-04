@@ -14,7 +14,7 @@ function FooterLink({ href, children }: { href: string; children: React.ReactNod
 
 export default function AppFooter() {
   return (
-    <footer className="border-t bg-white/70 dark:bg-neutral-950/60 backdrop-blur-xl">
+    <footer className="bg-white/70 dark:bg-neutral-950/60 backdrop-blur-xl bg-[radial-gradient(1200px_600px_at_10%_-10%,rgba(255,179,71,.25),transparent),radial-gradient(1200px_800px_at_110%_20%,rgba(255,99,132,.22),transparent),linear-gradient(to_bottom,#fff,rgba(255,255,255,.9))]">
       <div className="mx-auto max-w-6xl px-4 md:px-6 py-12 grid gap-10 md:grid-cols-5">
         {/* Brand */}
         <div className="md:col-span-2 grid gap-3">
@@ -78,7 +78,7 @@ export default function AppFooter() {
         </div>
       </div>
 
-      <div className="border-t border-black/10 dark:border-white/10">
+      <div className="border-t border-black/10 dark:border-white/10 ">
         <div className="mx-auto max-w-6xl px-4 md:px-6 py-5 text-xs text-neutral-500 dark:text-neutral-400 flex flex-wrap items-center gap-3 justify-between">
           <span>© {new Date().getFullYear()} TravelBook.</span>
           <span>Made with ❤️ & Next.js</span>

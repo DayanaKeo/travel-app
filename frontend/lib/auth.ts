@@ -1,8 +1,15 @@
-import type { NextAuthOptions } from "next-auth";
+import type { NextAuthOptions, User } from "next-auth";
 import Credentials from "next-auth/providers/credentials";
 import { PrismaAdapter } from "@auth/prisma-adapter";
 import { prisma } from "./prisma";
 import bcrypt from "bcryptjs";
+
+declare module "next-auth" {
+  interface User {
+    role?: "USER" | "ADMIN";
+    premium?: boolean;
+  }
+}
 
 export const authOptions: NextAuthOptions = {
   adapter: PrismaAdapter(prisma) as any,
@@ -50,18 +57,3 @@ export const authOptions: NextAuthOptions = {
     },
   },
 };
-
-export function requireAuth(headers: Headers) {
-  const uid = headers.get("x-user-id");
-  if (!uid) throw new Error("UNAUTHORIZED");
-  return parseInt(uid, 10);
-}
-
-export function requireAdmin(headers: Headers) {
-  const role = headers.get("x-user-role");
-  if (role !== "ADMIN") throw new Error("FORBIDDEN");
-}
-
-export function isAdmin(headers: Headers) {
-  return headers.get("x-user-role") === "ADMIN";
-}

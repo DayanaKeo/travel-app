@@ -5,6 +5,7 @@ import { getOwnerUserIdByVoyageId } from "@/lib/ownership";
 import { createShareLinkSchema } from "@/lib/validation/share";
 import bcrypt from "bcryptjs";
 import { generateSharePin } from "@/lib/security/pin";
+import { logUsageFromRequest } from "@/lib/audit";
 
 export const runtime = "nodejs";
 
@@ -13,6 +14,8 @@ function baseUrlFromHeaders(req: NextRequest) {
   const proto = req.headers.get("x-forwarded-proto") ?? "http";
   return `${proto}://${host ?? process.env.NEXT_PUBLIC_APP_URL ?? "localhost:3000"}`;
 }
+
+const tokenSuffix = (t: string) => String(t).slice(-6);
 
 export async function POST(req: NextRequest) {
   try {
@@ -39,15 +42,20 @@ export async function POST(req: NextRequest) {
       data: { voyageId, pinHash, token, expiresAt },
     });
 
-    const url = `${baseUrlFromHeaders(req)}/partage/${link.token}`;
+    await logUsageFromRequest(req, {
+      type: "share.create",
+      user_id: userId,
+      meta: { voyageId, token_suffix: tokenSuffix(link.token), expiresInHours }
+    });
 
-    // ⚠️ On ne renvoie le PIN en clair qu'à la création (pour partage)
+    const url = `${baseUrlFromHeaders(req)}/partage/${link.token}`;
     return NextResponse.json({ data: { ...link, url, pin: plainPin } }, { status: 201 });
   } catch (e: any) {
     if (e?.message === "UNAUTHORIZED") return NextResponse.json({ error: "Non authentifié" }, { status: 401 });
     return NextResponse.json({ error: "Erreur interne" }, { status: 500 });
   }
 }
+
 export async function GET(req: NextRequest) {
   try {
     const { id: userId } = await requireUserFromJwt(req);
