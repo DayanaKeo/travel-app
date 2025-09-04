@@ -52,10 +52,7 @@ function NavPill({ href, children, onClick }:{
     >
       {children}
       {active && (
-        <span
-          aria-hidden
-          className="absolute inset-0 rounded-full ring-1 ring-black/5 pointer-events-none"
-        />
+        <span aria-hidden className="absolute inset-0 rounded-full ring-1 ring-black/5 pointer-events-none" />
       )}
     </Link>
   );
@@ -85,7 +82,10 @@ function useTheme() {
 export default function AppHeader() {
   const { data: session } = useSession();
   const user = session?.user as any | undefined;
-  const isAdmin = user?.role === "admin";
+
+  // 🔐 robust: accepte "admin" ou "ADMIN"
+  const isAdmin = String(user?.role || "").toUpperCase() === "ADMIN";
+
   const scrolled = useScrollShadow();
   const [mobile, setMobile] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -93,7 +93,6 @@ export default function AppHeader() {
   const { open, setOpen } = usePalette();
   const { dark, toggle } = useTheme();
 
-  // close on outside
   useEffect(() => {
     const onDoc = (e: MouseEvent) => {
       if (menuRef.current && !menuRef.current.contains(e.target as Node)) setMenuOpen(false);
@@ -104,14 +103,13 @@ export default function AppHeader() {
 
   return (
     <>
-      {/* Skip link */}
       <a href="#main" className="sr-only focus:not-sr-only focus:fixed focus:z-[999] focus:top-2 focus:left-2 px-3 py-1.5 rounded-lg bg-neutral-900 text-white">
         Aller au contenu
       </a>
 
       <header
         className={cn(
-          "sticky top-0 z-50 border-b",
+          "sticky top-0 z-50",
           "bg-white/60 dark:bg-neutral-950/40 backdrop-blur-xl",
           scrolled ? "shadow-[0_10px_30px_-12px_rgba(0,0,0,.15)]" : "shadow-none"
         )}
@@ -143,9 +141,9 @@ export default function AppHeader() {
 
             {/* Nav desktop */}
             <nav className="hidden md:flex items-center gap-1">
-              <NavPill href="/app">Mes voyages</NavPill>
+              <NavPill href="/voyages/listing">Mes voyages</NavPill>
               <NavPill href="/explore">Explorer</NavPill>
-              {isAdmin && <NavPill href="/admin">Admin</NavPill>}
+              {isAdmin && <NavPill href="/admin/dashboard">Admin</NavPill>}
             </nav>
 
             {/* Right actions */}
@@ -199,7 +197,7 @@ export default function AppHeader() {
                         👤 Mon profil
                       </Link>
                       {isAdmin && (
-                        <Link href="/admin" onClick={()=>setMenuOpen(false)} role="menuitem"
+                        <Link href="/admin/dashboard" onClick={()=>setMenuOpen(false)} role="menuitem"
                           className="flex items-center gap-2 px-3 py-2 rounded-xl hover:bg-neutral-100/70 dark:hover:bg-neutral-800/60 text-sm">
                           🛠️ Espace admin
                         </Link>
@@ -224,12 +222,12 @@ export default function AppHeader() {
           >
             <NavPill href="/app" onClick={()=>setMobile(false)}>Mes voyages</NavPill>
             <NavPill href="/explore" onClick={()=>setMobile(false)}>Explorer</NavPill>
-            {isAdmin && <NavPill href="/admin" onClick={()=>setMobile(false)}>Admin</NavPill>}
+            {isAdmin && <NavPill href="/admin/dashboard" onClick={()=>setMobile(false)}>Admin</NavPill>}
           </div>
         </div>
       </header>
 
-      {/* Command palette (ultra simple) */}
+      {/* Command palette */}
       {open && (
         <div
           role="dialog"
@@ -253,7 +251,7 @@ export default function AppHeader() {
               <ul className="grid gap-1 px-1 pb-2">
                 <li><Link href="/app" onClick={()=>setOpen(false)} className="block px-3 py-2 rounded-xl hover:bg-neutral-100/70 dark:hover:bg-neutral-800/60 text-sm">Ouvrir l’app</Link></li>
                 <li><Link href="/explore" onClick={()=>setOpen(false)} className="block px-3 py-2 rounded-xl hover:bg-neutral-100/70 dark:hover:bg-neutral-800/60 text-sm">Explorer</Link></li>
-                {isAdmin && <li><Link href="/admin" onClick={()=>setOpen(false)} className="block px-3 py-2 rounded-xl hover:bg-neutral-100/70 dark:hover:bg-neutral-800/60 text-sm">Espace admin</Link></li>}
+                {isAdmin && <li><Link href="/admin/dashboard" onClick={()=>setOpen(false)} className="block px-3 py-2 rounded-xl hover:bg-neutral-100/70 dark:hover:bg-neutral-800/60 text-sm">Espace admin</Link></li>}
               </ul>
             </div>
           </div>

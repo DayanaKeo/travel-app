@@ -15,7 +15,7 @@ export default function SignInPage() {
     const res = await signIn("credentials", {
       email,
       password,
-      redirect: false,     // récupérer l'erreur côté client
+      redirect: false,
       callbackUrl: "/",
     });
 
