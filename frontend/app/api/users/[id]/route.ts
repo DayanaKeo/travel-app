@@ -1,12 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { requireAdmin, requireAuth } from "@/lib/auth";
+import { requireAdminFromRequest, requireUserIdFromRequest } from "@/app/api/_utils/auth";
 import { profilSchema, preferencesSchema, changePwdSchema } from "@/lib/validation/user";
 import bcrypt from "bcryptjs";
 
 export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
   try {
-    requireAdmin(req.headers);
+    requireAdminFromRequest(req);
     const user = await prisma.user.findUnique({
       where: { id: Number(params.id) },
       include: { profil: true, preferences: true },
@@ -19,7 +19,7 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
 
 export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
   try {
-    requireAdmin(req.headers);
+    requireAdminFromRequest(req);
     const id = Number(params.id);
     const body = await req.json();
 
@@ -62,7 +62,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
 
 export async function PUT(req: NextRequest) {
   try {
-    const userId = requireAuth(req.headers);
+    const userId = await requireUserIdFromRequest(req);
 
     // on trim pour éviter un false négatif si l'utilisateur met un espace
     const { currentPassword = "", newPassword = "" } = changePwdSchema.parse(await req.json());
@@ -99,7 +99,7 @@ export async function PUT(req: NextRequest) {
 
 export async function DELETE(req: NextRequest, { params }: { params: { id: string } }) {
   try {
-    requireAdmin(req.headers);
+    requireAdminFromRequest(req);
     const id = Number(params.id);
     await prisma.user.update({
       where: { id },

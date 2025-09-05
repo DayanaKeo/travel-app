@@ -1,7 +1,6 @@
-// app/api/users/export/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { requireAuth } from "@/lib/auth";
+import { requireUserIdFromRequest } from "@/app/api/_utils/auth";
 
 // ------- Rate limit (mémoire). En prod => Redis/KV.
 type Stamp = number;
@@ -68,7 +67,7 @@ export async function POST(req: NextRequest) {
 
 async function handleExport(req: NextRequest, scopes: Scope[]) {
   try {
-    const userId = requireAuth(req.headers);
+    const userId = await requireUserIdFromRequest(req);
     if (!rateLimit(userId)) {
       return NextResponse.json(
         { error: "Trop de requêtes. Réessayez dans quelques minutes." },

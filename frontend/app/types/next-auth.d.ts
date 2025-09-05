@@ -8,6 +8,9 @@ declare module "next-auth" {
       premium: boolean;
     } & DefaultSession["user"];
   }
+  interface User {
+    role?: "admin" | "user";
+  }
 }
 
 declare module "next-auth/jwt" {
