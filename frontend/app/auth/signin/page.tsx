@@ -19,7 +19,7 @@ function mapNextAuthError(code?: string | null) {
 export default function SignInPage() {
   const router = useRouter();
   const sp = useSearchParams();
-  const callbackUrl = sp.get("callbackUrl") || "/voyages";
+  const callbackUrl = sp.get("callbackUrl") || "/voyages/listing";
   const nextAuthError = mapNextAuthError(sp.get("error"));
 
   const [email, setEmail] = useState("");

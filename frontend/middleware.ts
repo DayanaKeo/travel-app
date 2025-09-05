@@ -7,6 +7,10 @@ const PUBLIC_API = [
   "/api/health",
   "/api/voyages/public",
   "/api/share-links/",
+  "api/auth/signup",
+  "/api/auth/verify",
+  "/api/auth/verify/resend",
+  "/api/dev/send-test"
 ];
 
 const ADMIN_PATHS = [/^\/admin($|\/)/, /^\/api\/admin($|\/)/];
