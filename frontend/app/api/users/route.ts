@@ -1,13 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { requireAuth } from "@/lib/auth";
+import { requireUserIdFromRequest } from "@/app/api/_utils/auth";
 import { profilSchema, preferencesSchema, changePwdSchema } from "@/lib/validation/user";
 import bcrypt from "bcryptjs";
 import { parsePhoneNumberFromString } from "libphonenumber-js";
 
 export async function GET(req: NextRequest) {
   try {
-    const userId = requireAuth(req.headers);
+    const userId = await requireUserIdFromRequest(req);
     const me = await prisma.user.findUnique({
       where: { id: userId },
       include: { profil: true, preferences: true },
@@ -21,7 +21,7 @@ export async function GET(req: NextRequest) {
 
 export async function PATCH(req: NextRequest) {
   try {
-    const userId = requireAuth(req.headers);
+    const userId = await requireUserIdFromRequest(req);
     const body = await req.json();
 
     if (body.profile) {
@@ -101,7 +101,7 @@ export async function PATCH(req: NextRequest) {
 
 export async function PUT(req: NextRequest) {
   try {
-    const userId = requireAuth(req.headers);
+    const userId = await requireUserIdFromRequest(req);
     const { currentPassword, newPassword } = changePwdSchema.parse(await req.json());
 
     const user = await prisma.user.findUnique({ where: { id: userId } });
@@ -133,7 +133,7 @@ export async function PUT(req: NextRequest) {
 
 export async function DELETE(req: NextRequest) {
   try {
-    const userId = requireAuth(req.headers);
+    const userId = await requireUserIdFromRequest(req);
     await prisma.user.update({
       where: { id: userId },
       data: { email: null, passwordHash: null, name: null, image: null },

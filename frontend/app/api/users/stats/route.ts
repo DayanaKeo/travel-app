@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { requireAuth } from "@/lib/auth";
+import { requireUserIdFromRequest } from "@/app/api/_utils/auth";
 
 export async function GET(req: NextRequest) {
   try {
-    const userId = requireAuth(req.headers);
+    const userId = await requireUserIdFromRequest(req);
 
     const [voyages, etapes, photos, videos] = await Promise.all([
       prisma.voyage.count({ where: { userId } }),

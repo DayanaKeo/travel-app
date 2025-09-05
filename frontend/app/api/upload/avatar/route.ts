@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { requireAuth } from "@/lib/auth";        // ton helper (lit x-user-id)
+import { requireUserIdFromRequest } from "@/app/api/_utils/auth";
 import { prisma } from "@/lib/prisma";
 import { v2 as cloudinary, UploadApiResponse } from "cloudinary";
 
@@ -14,9 +14,9 @@ cloudinary.config({
 const ALLOWED = ["image/jpeg", "image/png", "image/webp", "image/avif"];
 const MAX_SIZE = 3 * 1024 * 1024; // 3 Mo
 
-export async function POST(req: NextRequest) {
+export async function POST(req: NextRequest): Promise<NextResponse> {
   try {
-    const userId = requireAuth(req.headers); // ✅ Auth requise
+    const userId = await requireUserIdFromRequest(req); // ✅ Auth requise
 
     const form = await req.formData();
     const file = form.get("file") as File | null;

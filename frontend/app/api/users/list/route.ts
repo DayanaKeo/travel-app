@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { requireAdmin } from "@/lib/auth";
+import { requireAdminFromRequest } from "@/app/api/_utils/auth";
 
 export async function GET(req: NextRequest) {
   try {
-    requireAdmin(req.headers);
+    requireAdminFromRequest(req);
     const users = await prisma.user.findMany({
       orderBy: { createdAt: "desc" },
       select: { id: true, email: true, role: true, premium: true, createdAt: true },
