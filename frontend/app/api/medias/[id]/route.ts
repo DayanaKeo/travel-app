@@ -17,7 +17,10 @@ function parseId(raw: string) {
   return Number.isInteger(n) && n > 0 ? n : null;
 }
 
-export async function DELETE(req: NextRequest, ctx: { params: Promise<{ id: string }> }) {
+type RouteCtx<P extends Record<string, string>> = { params: Promise<P> };
+type IdParam = { id: string };
+
+export async function DELETE(req: NextRequest, ctx: RouteCtx<IdParam>) {
   try {
     const { id } = await ctx.params;
     const mediaId = parseId(id);
@@ -32,7 +35,7 @@ export async function DELETE(req: NextRequest, ctx: { params: Promise<{ id: stri
     });
     if (!media) return NextResponse.json({ error: "Média introuvable" }, { status: 404 });
 
-    // 2) Ownership par étape (ou voyage si nécessaire)
+    // 2) Ownership
     if (media.etapeId) {
       const owner = await getOwnerUserIdByEtapeId(media.etapeId);
       if (!owner) return NextResponse.json({ error: "Étape introuvable" }, { status: 404 });
@@ -42,11 +45,10 @@ export async function DELETE(req: NextRequest, ctx: { params: Promise<{ id: stri
       if (!v) return NextResponse.json({ error: "Voyage introuvable" }, { status: 404 });
       if (v.userId !== userId) return NextResponse.json({ error: "Accès interdit" }, { status: 403 });
     } else {
-      // Aucun rattachement -> par sécurité on refuse
       return NextResponse.json({ error: "Média non rattaché" }, { status: 409 });
     }
 
-    // 3) Suppression Cloudinary (si public_id connu)
+    // 3) Suppression Cloudinary
     if (media.mongoRef) {
       try {
         await cloudinary.uploader.destroy(media.mongoRef, {
@@ -54,15 +56,14 @@ export async function DELETE(req: NextRequest, ctx: { params: Promise<{ id: stri
         });
       } catch {
         // on ignore l'erreur Cloudinary pour ne pas bloquer la suppression DB
-
       }
     }
 
     await prisma.media.delete({ where: { id: mediaId } });
-
     return NextResponse.json({ ok: true });
-  } catch (e: any) {
-    if (e.message === "UNAUTHORIZED") return NextResponse.json({ error: "Non authentifié" }, { status: 401 });
+  } catch (e: unknown) {
+    const msg = e instanceof Error ? e.message : String(e);
+    if (msg === "UNAUTHORIZED") return NextResponse.json({ error: "Non authentifié" }, { status: 401 });
     return NextResponse.json({ error: "Erreur interne" }, { status: 500 });
   }
 }

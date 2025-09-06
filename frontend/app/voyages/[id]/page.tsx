@@ -31,7 +31,6 @@ type Etape = {
   date: string;
 };
 
-// Utilitaires
 function safeJson(res: Response) {
   return res.json().catch(() => null);
 }
@@ -39,26 +38,30 @@ const fmtDate = (d: string | Date) =>
   new Date(d).toLocaleDateString("fr-FR", { day: "2-digit", month: "2-digit", year: "numeric" });
 const plural = (n: number, s: string, p = s + "s") => `${n} ${n > 1 ? p : s}`;
 
-export default async function VoyageDetailPage({ params }: { params: { id: string } }) {
-  // ✅ params n'est pas une Promise dans l'App Router
-  const voyageId = Number(params.id);
+// Next 15 : params est une Promise
+type PageCtx<P extends Record<string, string>> = { params: Promise<P> };
+
+export default async function VoyageDetailPage(ctx: PageCtx<{ id: string }>) {
+  const { id } = await ctx.params; // ✅ params est une Promise
+  const voyageId = Number(id);
   if (!Number.isInteger(voyageId) || voyageId <= 0) notFound();
 
-  // ✅ cookies()/headers() ne sont pas async
+  // cookies() / headers() sont synchrones côté serveur
   const cookieStore = await cookies();
-  const cookieHeader = cookieStore.getAll().map((c) => `${encodeURIComponent(c.name)}=${encodeURIComponent(c.value)}`).join("; ");
+  const cookieHeader = cookieStore
+    .getAll()
+    .map((c) => `${encodeURIComponent(c.name)}=${encodeURIComponent(c.value)}`)
+    .join("; ");
 
   const h = await headers();
-  const forwardedHost = h.get("x-forwarded-host") ?? h.get("host") ?? process.env.NEXT_PUBLIC_APP_URL ?? "localhost:3000";
+  const forwardedHost =
+    h.get("x-forwarded-host") ?? h.get("host") ?? process.env.NEXT_PUBLIC_APP_URL ?? "localhost:3000";
   const proto = h.get("x-forwarded-proto") ?? (forwardedHost.includes("localhost") ? "http" : "https");
   const base = forwardedHost.startsWith("http") ? forwardedHost : `${proto}://${forwardedHost}`;
 
   const auth = h.get("authorization") ?? undefined;
-  const commonHeaders: HeadersInit = auth
-    ? { cookie: cookieHeader, authorization: auth }
-    : { cookie: cookieHeader };
+  const commonHeaders: HeadersInit = auth ? { cookie: cookieHeader, authorization: auth } : { cookie: cookieHeader };
 
-  // ✅ pas de cache, cookies forwardés
   const [voyageRes, etapesRes] = await Promise.all([
     fetch(`${base}/api/voyages/${voyageId}`, { cache: "no-store", headers: commonHeaders }),
     fetch(`${base}/api/etapes?voyageId=${voyageId}&order=asc`, { cache: "no-store", headers: commonHeaders }),
@@ -74,8 +77,9 @@ export default async function VoyageDetailPage({ params }: { params: { id: strin
     throw new Error(j?.error || `Impossible de charger les étapes du voyage #${voyageId}`);
   }
 
-  const { data: voyage }: { data: Voyage } = (await voyageRes.json()) as any;
-  const { data: etapes }: { data: Etape[] } = (await etapesRes.json()) as any;
+  // ❌ plus de "as any"
+  const { data: voyage } = (await voyageRes.json()) as { data: Voyage };
+  const { data: etapes } = (await etapesRes.json()) as { data: Etape[] };
 
   const dateRange = `${fmtDate(voyage.dateDebut)} → ${fmtDate(voyage.dateFin)}`;
   const msPerDay = 24 * 60 * 60 * 1000;
@@ -146,7 +150,7 @@ export default async function VoyageDetailPage({ params }: { params: { id: strin
               aria-label="Actions du voyage"
               className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between"
             >
-              {/* Zone actions principales (mobile : icônes à côté) */}
+              {/* Actions */}
               <div className="flex items-center gap-2">
                 <Link
                   href={`/voyages/${voyageId}/share`}
@@ -155,7 +159,7 @@ export default async function VoyageDetailPage({ params }: { params: { id: strin
                   Partager
                 </Link>
 
-                {/* Icônes d’action en mobile uniquement */}
+                {/* Icônes mobile */}
                 <Link
                   href={`/etapes/new?voyageId=${voyageId}`}
                   className="sm:hidden inline-flex items-center justify-center rounded-xl bg-orange-500 hover:bg-orange-600 text-white p-2 shadow-sm"
@@ -174,14 +178,9 @@ export default async function VoyageDetailPage({ params }: { params: { id: strin
                 </Link>
               </div>
 
-              {/* Stats — scroll horizontal en mobile pour éviter la casse */}
-              <div
-                className="min-w-0 -mx-1 sm:mx-0 overflow-x-auto"
-                style={{ scrollbarWidth: "none" as any, msOverflowStyle: "none" as any }}
-              >
-                <div
-                  className="flex items-center gap-2 sm:gap-3 px-1 sm:px-0 text-[11px] sm:text-xs text-gray-700 whitespace-nowrap"
-                >
+              {/* Stats — scroll horizontal en mobile (sans any) */}
+              <div className="min-w-0 -mx-1 sm:mx-0 overflow-x-auto" style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}>
+                <div className="flex items-center gap-2 sm:gap-3 px-1 sm:px-0 text-[11px] sm:text-xs text-gray-700 whitespace-nowrap">
                   <span className="inline-flex items-center gap-1.5">
                     <CalendarDays className="h-4 w-4 shrink-0" />
                     <span className="hidden xs:inline">{dateRange}</span>
@@ -196,7 +195,7 @@ export default async function VoyageDetailPage({ params }: { params: { id: strin
                 </div>
               </div>
 
-              {/* Boutons texte en desktop/tablette */}
+              {/* Boutons desktop */}
               <div className="hidden sm:flex items-center gap-2">
                 <Link
                   href={`/etapes/new?voyageId=${voyageId}`}
@@ -228,13 +227,16 @@ export default async function VoyageDetailPage({ params }: { params: { id: strin
         {/* ===== MAP + TIMELINE ===== */}
         <article className="bg-white rounded-2xl p-4 border border-orange-100 shadow">
           <h2 className="font-semibold text-[#E63946] mb-3">Itinéraire & étapes</h2>
-          {/* EtapesChronoMap s’adapte, prévois une min-height pour mobile */}
           <div className="min-h-64">
             <EtapesChronoMap etapes={etapes} />
           </div>
           {!etapes?.length && (
             <p className="mt-3 text-sm text-gray-500">
-              Aucune étape. <Link href={`/etapes/new?voyageId=${voyageId}`} className="underline underline-offset-2">Ajouter une étape</Link>.
+              Aucune étape.{" "}
+              <Link href={`/etapes/new?voyageId=${voyageId}`} className="underline underline-offset-2">
+                Ajouter une étape
+              </Link>
+              .
             </p>
           )}
         </article>
@@ -252,7 +254,6 @@ export default async function VoyageDetailPage({ params }: { params: { id: strin
           </div>
         </aside>
 
-        {/* ===== PARTAGE ===== */}
         <section id="share">
           <SharePanel voyageId={voyageId} />
         </section>

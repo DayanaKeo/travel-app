@@ -13,13 +13,32 @@ cloudinary.config({
   api_secret: process.env.CLOUDINARY_API_SECRET!,
 });
 
+// --- Next 15 : params est une Promise ---
+type RouteCtx<P extends Record<string, string>> = { params: Promise<P> };
+type IdParam = { id: string };
+
+// Typages locaux (sans toucher à Prisma)
+// → pour enlever les 'any' tout en restant souple
+type VoyageUpdateData = Partial<{
+  titre: string;
+  description: string | null;
+  dateDebut: string | Date;
+  dateFin: string | Date;
+  isPublic: boolean;
+  image: string | null;
+}>;
+
+type CloudinaryUploadOk = {
+  secure_url: string;
+  public_id: string;
+};
+
 function parseId(raw: string) {
   const n = Number(raw);
   return Number.isInteger(n) && n > 0 ? n : null;
 }
 
-
-export async function GET(req: NextRequest, ctx: { params: Promise<{ id: string }> }) {
+export async function GET(req: NextRequest, ctx: RouteCtx<IdParam>) {
   try {
     const { id } = await ctx.params;
     const voyageId = Number(id);
@@ -27,6 +46,7 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ id: string 
       return NextResponse.json({ error: "id invalide" }, { status: 400 });
     }
 
+    // 🔐 lecture réservée au propriétaire
     const { id: userId } = await requireUserFromJwt(req);
 
     const voyage = await prisma.voyage.findFirst({
@@ -48,39 +68,44 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ id: string 
 
     if (!voyage) return NextResponse.json({ error: "Voyage introuvable" }, { status: 404 });
     return NextResponse.json({ data: voyage });
-  } catch (e: any) {
-    if (e.message === "UNAUTHORIZED") return NextResponse.json({ error: "Non authentifié" }, { status: 401 });
+  } catch (e: unknown) {
+    const msg = e instanceof Error ? e.message : String(e);
+    if (msg === "UNAUTHORIZED") return NextResponse.json({ error: "Non authentifié" }, { status: 401 });
     return NextResponse.json({ error: "Erreur interne" }, { status: 500 });
   }
 }
 
-export async function PATCH(req: NextRequest, ctx: { params: Promise<{ id: string }> }) {
+export async function PATCH(req: NextRequest, ctx: RouteCtx<IdParam>) {
   try {
     const { id } = await ctx.params;
     const voyageId = parseId(id);
     if (!voyageId) return NextResponse.json({ error: "id invalide" }, { status: 400 });
 
     const { id: userId } = await requireUserFromJwt(req);
-    await assertVoyageOwnership(voyageId, userId);
+    await assertVoyageOwnership(voyageId, userId); // 🔐
 
     const ct = req.headers.get("content-type") || "";
-    let body: any = {};
+    let input: unknown = {};        // <- plus de 'any'
     let file: File | null = null;
 
     if (ct.includes("multipart/form-data")) {
       const form = await req.formData();
-      body.titre = form.get("titre") ?? undefined;
-      body.description = form.get("description") ?? undefined;
-      body.dateDebut = form.get("dateDebut") ?? undefined;
-      body.dateFin = form.get("dateFin") ?? undefined;
-      body.isPublic = form.get("isPublic") ?? undefined;
-      body.removeCover = form.get("removeCover") ?? undefined;
+      input = {
+        titre: form.get("titre") ?? undefined,
+        description: form.get("description") ?? undefined,
+        dateDebut: form.get("dateDebut") ?? undefined,
+        dateFin: form.get("dateFin") ?? undefined,
+        isPublic: form.get("isPublic") ?? undefined,
+        removeCover: form.get("removeCover") ?? undefined,
+        // image?: ignorée ici (on s'occupe du fichier)
+      };
       file = (form.get("cover") as File) ?? null;
     } else {
-      body = await req.json();
+      input = await req.json();
     }
 
-    const parsed = updateVoyageSchema.safeParse(body);
+    // ✅ validation Zod (p garde le bon typage)
+    const parsed = updateVoyageSchema.safeParse(input);
     if (!parsed.success) return NextResponse.json({ error: parsed.error.issues }, { status: 400 });
     const p = parsed.data;
 
@@ -90,7 +115,8 @@ export async function PATCH(req: NextRequest, ctx: { params: Promise<{ id: strin
     });
     if (!current) return NextResponse.json({ error: "Voyage introuvable" }, { status: 404 });
 
-    const data: any = {
+    // Construction du patch (typé)
+    const data: VoyageUpdateData = {
       ...("titre" in p ? { titre: p.titre } : {}),
       ...("description" in p ? { description: p.description ?? null } : {}),
       ...("dateDebut" in p ? { dateDebut: p.dateDebut } : {}),
@@ -99,17 +125,21 @@ export async function PATCH(req: NextRequest, ctx: { params: Promise<{ id: strin
       ...("image" in p ? { image: p.image } : {}),
     };
 
+    // Upload cover -> Cloudinary (+ media)
     if (file && file.size > 0) {
       const mime = file.type || "application/octet-stream";
       const ok = ["image/jpeg", "image/png", "image/webp", "image/gif"];
-      if (!ok.includes(mime)) return NextResponse.json({ error: "Format image non supporté" }, { status: 415 });
+      if (!ok.includes(mime)) {
+        return NextResponse.json({ error: "Format image non supporté" }, { status: 415 });
+      }
 
       const buffer = Buffer.from(await file.arrayBuffer());
       const folder = process.env.CLOUDINARY_UPLOAD_FOLDER ?? "carnet-voyage/voyages";
-      const uploaded = await new Promise<any>((resolve, reject) => {
+
+      const uploaded = await new Promise<CloudinaryUploadOk>((resolve, reject) => {
         const stream = cloudinary.uploader.upload_stream(
           { folder, resource_type: "image" },
-          (err, result) => (err || !result ? reject(err) : resolve(result))
+          (err, result) => (err || !result ? reject(err) : resolve(result as CloudinaryUploadOk))
         );
         stream.end(buffer);
       });
@@ -132,6 +162,7 @@ export async function PATCH(req: NextRequest, ctx: { params: Promise<{ id: strin
         where: { voyageId, url: current.image, type: "image" },
         select: { id: true, mongoRef: true },
       });
+
       if (existingMedia?.mongoRef) {
         try {
           await cloudinary.uploader.destroy(existingMedia.mongoRef, { resource_type: "image" });
@@ -144,15 +175,16 @@ export async function PATCH(req: NextRequest, ctx: { params: Promise<{ id: strin
 
     const updated = await prisma.voyage.update({ where: { id: voyageId }, data });
     return NextResponse.json({ data: updated });
-  } catch (e: any) {
-    if (e.message === "UNAUTHORIZED") return NextResponse.json({ error: "Non authentifié" }, { status: 401 });
-    if (e.message === "FORBIDDEN") return NextResponse.json({ error: "Accès interdit" }, { status: 403 });
-    if (e.message === "NOT_FOUND") return NextResponse.json({ error: "Voyage introuvable" }, { status: 404 });
+  } catch (e: unknown) {
+    const msg = e instanceof Error ? e.message : String(e);
+    if (msg === "UNAUTHORIZED") return NextResponse.json({ error: "Non authentifié" }, { status: 401 });
+    if (msg === "FORBIDDEN") return NextResponse.json({ error: "Accès interdit" }, { status: 403 });
+    if (msg === "NOT_FOUND") return NextResponse.json({ error: "Voyage introuvable" }, { status: 404 });
     return NextResponse.json({ error: "Erreur interne" }, { status: 500 });
   }
 }
 
-export async function DELETE(req: NextRequest, ctx: { params: Promise<{ id: string }> }) {
+export async function DELETE(req: NextRequest, ctx: RouteCtx<IdParam>) {
   try {
     const { id } = await ctx.params;
     const voyageId = Number(id);
@@ -166,8 +198,9 @@ export async function DELETE(req: NextRequest, ctx: { params: Promise<{ id: stri
 
     await prisma.voyage.delete({ where: { id: voyageId } });
     return NextResponse.json({ ok: true });
-  } catch (e: any) {
-    if (e.message === "UNAUTHORIZED") return NextResponse.json({ error: "Non authentifié" }, { status: 401 });
+  } catch (e: unknown) {
+    const msg = e instanceof Error ? e.message : String(e);
+    if (msg === "UNAUTHORIZED") return NextResponse.json({ error: "Non authentifié" }, { status: 401 });
     return NextResponse.json({ error: "Erreur interne" }, { status: 500 });
   }
 }

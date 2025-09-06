@@ -1,22 +1,34 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { Suspense, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 
 export default function CheckEmailPage() {
+  return (
+    <Suspense fallback={
+      <main className="min-h-[70vh] flex items-center justify-center px-4">
+        <div className="w-full max-w-md rounded-2xl border p-6 shadow-sm bg-white">
+          <h1 className="text-xl font-semibold">Vérifie ta boîte mail</h1>
+          <p className="mt-2 text-sm text-gray-600">Chargement…</p>
+        </div>
+      </main>
+    }>
+      <CheckEmailInner />
+    </Suspense>
+  );
+}
+
+function CheckEmailInner() {
   const sp = useSearchParams();
   const fromQuery = sp.get("email") ?? "";
+
   const [email, setEmail] = useState(fromQuery);
   const [loading, setLoading] = useState(false);
   const [msg, setMsg] = useState<{ type: "success" | "error" | "info"; text: string } | null>(
-    fromQuery
-      ? { type: "info", text: `Un e-mail a été envoyé à ${fromQuery}. Le lien est valable 24h.` }
-      : null
+    fromQuery ? { type: "info", text: `Un e-mail a été envoyé à ${fromQuery}. Le lien est valable 24h.` } : null
   );
 
-  const canSubmit = useMemo(() => {
-    return !!email && /\S+@\S+\.\S+/.test(email) && !loading;
-  }, [email, loading]);
+  const canSubmit = useMemo(() => !!email && /\S+@\S+\.\S+/.test(email) && !loading, [email, loading]);
 
   async function handleResend(e: React.FormEvent) {
     e.preventDefault();
@@ -30,24 +42,17 @@ export default function CheckEmailPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email }),
       });
-
       const data = await res.json();
       if (res.ok) {
         setMsg({ type: "success", text: "E-mail de vérification renvoyé. Pense à vérifier le spam." });
       } else if (res.status === 429) {
-        setMsg({
-          type: "info",
-          text: data?.error || "Un e-mail actif existe déjà. Consulte ta boîte de réception.",
-        });
+        setMsg({ type: "info", text: data?.error || "Un e-mail actif existe déjà. Consulte ta boîte de réception." });
       } else if (res.status === 404) {
-        setMsg({
-          type: "error",
-          text: "Aucun compte avec cet e-mail. Vérifie l’adresse ou inscris-toi.",
-        });
+        setMsg({ type: "error", text: "Aucun compte avec cet e-mail. Vérifie l’adresse ou inscris-toi." });
       } else {
         setMsg({ type: "error", text: data?.error || "Impossible de renvoyer l’e-mail pour le moment." });
       }
-    } catch (err) {
+    } catch {
       setMsg({ type: "error", text: "Erreur réseau. Réessaie." });
     } finally {
       setLoading(false);
@@ -58,9 +63,7 @@ export default function CheckEmailPage() {
     <main className="min-h-[70vh] flex items-center justify-center px-4">
       <div className="w-full max-w-md rounded-2xl border p-6 shadow-sm bg-white">
         <div className="flex items-center gap-3 mb-4">
-          <div className="h-10 w-10 flex items-center justify-center rounded-full bg-indigo-100 text-indigo-700 text-xl">
-            ✉️
-          </div>
+          <div className="h-10 w-10 flex items-center justify-center rounded-full bg-indigo-100 text-indigo-700 text-xl">✉️</div>
           <h1 className="text-xl font-semibold">Vérifie ta boîte mail</h1>
         </div>
 
@@ -92,7 +95,6 @@ export default function CheckEmailPage() {
             placeholder="ton.email@exemple.com"
             className="w-full rounded-lg border px-3 py-2 outline-none focus:ring-2 focus:ring-indigo-500"
           />
-
           <button
             type="submit"
             disabled={!canSubmit}
