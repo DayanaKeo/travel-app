@@ -1,0 +1,196 @@
+// prisma/schema.prisma
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL") // mysql://app:app@127.0.0.1:3306/travelbook
+}
+
+enum Role {
+  USER
+  ADMIN
+}
+
+enum Status {
+  ACTIVE
+  SUSPENDED
+}
+
+model User {
+  id            Int       @id @default(autoincrement())
+  name          String?
+  email         String?   @unique
+  emailVerified DateTime?
+  image         String?
+  status     Status    @default(ACTIVE)
+
+  // Auth (Credentials optionnel)
+  passwordHash String?
+
+  // Rôle & offre
+  role    Role    @default(USER)
+  premium Boolean @default(false)
+
+  // Relations
+  accounts Account[]
+  sessions Session[]
+  voyages  Voyage[]
+
+   profil       ProfilUser?     @relation("ProfilUserToUser")
+   preferences  PreferenceUser? @relation("PreferenceUserToUser")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model ProfilUser {
+  id             Int      @id @default(autoincrement())
+  userId         Int      @unique
+
+  nomComplet     String?
+  telephone      String?
+  localisation   String?
+  languePreferee String?
+  biographie     String?
+  dateNaissance  DateTime?
+  avatarUrl      String?
+  codePays       String?
+
+  user User @relation("ProfilUserToUser", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("profil_user")
+}
+
+model PreferenceUser {
+  id                        Int     @id @default(autoincrement())
+  userId                    Int     @unique
+
+  notificationsEmail        Boolean @default(true)
+  profilPublic              Boolean @default(false)
+  suggestionsIAAutomatiques Boolean @default(true)
+
+  user User @relation("PreferenceUserToUser", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("preference_user")
+}
+
+model Account {
+  id                Int     @id @default(autoincrement())
+  userId            Int
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           Int      @id @default(autoincrement())
+  sessionToken String   @unique
+  userId       Int
+  expires      DateTime
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  id         Int      @id @default(autoincrement())
+  identifier String
+  tokenHash   String    // SHA-256 du token
+  expires     DateTime
+  createdAt   DateTime  @default(now())
+
+  @@unique([identifier])
+  @@index([expires])
+}
+
+model Voyage {
+  id          Int      @id @default(autoincrement())
+  userId      Int
+  titre       String
+  description String?
+  dateDebut   DateTime
+  dateFin     DateTime
+  isPublic    Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  image       String?
+
+  user   User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  etapes Etape[]
+  media  Media[]
+  shares ShareLink[]
+}
+
+model Etape {
+  id        Int      @id @default(autoincrement())
+  voyageId  Int
+  titre     String
+  texte     String?
+  latitude  Decimal  @db.Decimal(10, 8)
+  longitude Decimal  @db.Decimal(11, 8)
+  adresse   String
+  date      DateTime
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  status    EtapeStatus @default(DRAFT)
+  ordre     Int?
+  deletedAt DateTime?
+
+  voyage Voyage  @relation(fields: [voyageId], references: [id], onDelete: Cascade)
+  media  Media[]
+
+  @@index([voyageId, date]) // timeline + carte
+   @@index([date])
+   @@fulltext([titre, texte]) // si MySQL 8 et Prisma ft-index activé
+}
+
+enum EtapeStatus {
+  DRAFT
+  PUBLISHED
+}
+
+
+model Media {
+  id        Int       @id @default(autoincrement())
+  voyageId  Int?
+  etapeId   Int?
+  url       String
+  type      String // "image" | "video"
+  takenAt   DateTime?
+  mongoRef  String?
+  createdAt DateTime  @default(now())
+
+  voyage Voyage? @relation(fields: [voyageId], references: [id], onDelete: SetNull)
+  etape  Etape?  @relation(fields: [etapeId], references: [id], onDelete: SetNull)
+
+  @@index([voyageId])
+  @@index([etapeId])
+}
+
+model ShareLink {
+  id        Int      @id @default(autoincrement())
+  voyageId  Int
+  pinHash   String // bcrypt/argon2 du PIN
+  token     String   @unique // UUID du lien
+  expiresAt DateTime
+  isRevoked Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  voyage Voyage @relation(fields: [voyageId], references: [id], onDelete: Cascade)
+
+  @@index([voyageId])
+  @@index([expiresAt])
+}
