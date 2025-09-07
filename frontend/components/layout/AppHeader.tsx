@@ -24,14 +24,12 @@ export default function AppHeader() {
 
   const [mobileOpen, setMobileOpen] = useState(false);
 
-  // Lock body scroll when overlays are open
   useEffect(() => {
     const lock = mobileOpen || open;
     document.body.style.overflow = lock ? "hidden" : "";
     return () => { document.body.style.overflow = ""; };
   }, [mobileOpen, open]);
 
-  // Close overlays on route change
   useEffect(() => {
     setMobileOpen(false);
     setOpen(false);
@@ -53,7 +51,6 @@ export default function AppHeader() {
       >
         <div className="mx-auto max-w-6xl px-4 md:px-6">
           <div className="h-16 flex items-center justify-between gap-2">
-            {/* Brand + burger */}
             <div className="flex items-center gap-2">
               <button
                 className="md:hidden -ml-1 p-2 rounded-xl hover:bg-neutral-100/60 dark:hover:bg-neutral-800/60 focus-visible:ring-2 focus-visible:ring-red-400"
@@ -69,7 +66,6 @@ export default function AppHeader() {
               <Brand />
             </div>
 
-            {/* Nav desktop */}
             <nav className="hidden md:flex items-center gap-1" role="navigation" aria-label="Navigation principale">
               <NavPill href="/voyages/listing">Mes voyages</NavPill>
               <NavPill href="/explore">Explorer</NavPill>
