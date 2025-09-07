@@ -44,7 +44,7 @@ export default function AppHeader() {
       <header
         id="top"
         className={cn(
-          "sticky top-0 z-50 border-b",
+          "sticky top-0 z-50",
           "bg-white/60 dark:bg-neutral-950/40 backdrop-blur-xl",
           scrolled ? "shadow-[0_10px_30px_-12px_rgba(0,0,0,.15)]" : "shadow-none"
         )}

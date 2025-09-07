@@ -38,7 +38,6 @@ const fmtDate = (d: string | Date) =>
   new Date(d).toLocaleDateString("fr-FR", { day: "2-digit", month: "2-digit", year: "numeric" });
 const plural = (n: number, s: string, p = s + "s") => `${n} ${n > 1 ? p : s}`;
 
-// Next 15 : params est une Promise
 type PageCtx<P extends Record<string, string>> = { params: Promise<P> };
 
 export default async function VoyageDetailPage(ctx: PageCtx<{ id: string }>) {
@@ -96,7 +95,6 @@ export default async function VoyageDetailPage(ctx: PageCtx<{ id: string }>) {
   return (
     <div className="min-h-screen bg-[#FFF5F5]">
       <div className="mx-auto max-w-5xl px-4 sm:px-6 py-6 sm:py-8 space-y-6">
-        {/* ===== COVER ===== */}
         {cover ? (
           <section className="relative h-56 sm:h-80 overflow-hidden rounded-2xl border border-orange-100 shadow">
             <Image
@@ -142,7 +140,6 @@ export default async function VoyageDetailPage(ctx: PageCtx<{ id: string }>) {
           </header>
         )}
 
-        {/* ===== BARRE STICKY (responsive) ===== */}
         <div className="sticky top-2 sm:top-3 z-10">
           <div className="bg-white/90 backdrop-blur rounded-2xl border border-orange-100 shadow p-2.5 sm:p-3">
             <div
@@ -150,7 +147,6 @@ export default async function VoyageDetailPage(ctx: PageCtx<{ id: string }>) {
               aria-label="Actions du voyage"
               className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between"
             >
-              {/* Actions */}
               <div className="flex items-center gap-2">
                 <Link
                   href={`/voyages/${voyageId}/share`}
@@ -178,7 +174,6 @@ export default async function VoyageDetailPage(ctx: PageCtx<{ id: string }>) {
                 </Link>
               </div>
 
-              {/* Stats — scroll horizontal en mobile (sans any) */}
               <div className="min-w-0 -mx-1 sm:mx-0 overflow-x-auto" style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}>
                 <div className="flex items-center gap-2 sm:gap-3 px-1 sm:px-0 text-[11px] sm:text-xs text-gray-700 whitespace-nowrap">
                   <span className="inline-flex items-center gap-1.5">
@@ -216,7 +211,6 @@ export default async function VoyageDetailPage(ctx: PageCtx<{ id: string }>) {
           </div>
         </div>
 
-        {/* ===== DESCRIPTION ===== */}
         {voyage.description && (
           <article className="bg-white rounded-2xl p-4 border border-orange-100 shadow">
             <h2 className="font-semibold text-[#E63946] mb-2">Description</h2>
@@ -224,7 +218,6 @@ export default async function VoyageDetailPage(ctx: PageCtx<{ id: string }>) {
           </article>
         )}
 
-        {/* ===== MAP + TIMELINE ===== */}
         <article className="bg-white rounded-2xl p-4 border border-orange-100 shadow">
           <h2 className="font-semibold text-[#E63946] mb-3">Itinéraire & étapes</h2>
           <div className="min-h-64">
@@ -241,7 +234,6 @@ export default async function VoyageDetailPage(ctx: PageCtx<{ id: string }>) {
           )}
         </article>
 
-        {/* ===== INFOS ===== */}
         <aside className="space-y-4">
           <div className="bg-white rounded-2xl p-4 border border-orange-100 shadow">
             <h3 className="font-semibold text-[#E63946] mb-2">Infos</h3>

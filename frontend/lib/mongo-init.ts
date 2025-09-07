@@ -38,7 +38,7 @@ export async function ensureMongoCollectionsAndIndexes() {
         required: ["at", "type"],
         properties: {
           at: { bsonType: "date" },
-          type: { bsonType: "string", minLength: 2 }, // ex: 'signin', 'voyage.view'
+          type: { bsonType: "string", minLength: 2 },
           user_id: { bsonType: ["int", "null"] },
           meta: { bsonType: ["object", "null"] }
         }

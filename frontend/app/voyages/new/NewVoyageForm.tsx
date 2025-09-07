@@ -238,11 +238,12 @@ export default function NewVoyageForm() {
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
       <header className="flex items-start justify-between">
         <div>
-          <h2 className="text-xl sm:text-2xl font-semibold text-[#E63946]">Nouveau voyage</h2>
-          <p className="text-xs text-gray-500">Renseigne les infos de base et ajoute une couverture (optionnel).</p>
+          {/* <h2 className="text-xl sm:text-2xl font-semibold text-[#E63946]">Nouveau voyage</h2> */}
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex-col items-center gap-3 sm:flex-row sm:flex">
+          <p className="text-xs text-gray-500">Renseigne les infos de base et ajoute une couverture (optionnel).</p>
+
           <button
             type="button"
             onClick={resetForm}

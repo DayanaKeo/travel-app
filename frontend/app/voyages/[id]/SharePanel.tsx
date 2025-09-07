@@ -76,7 +76,7 @@ export default function SharePanel({ voyageId }: { voyageId: number }) {
 
   return (
     <div className="rounded-2xl bg-white border border-orange-100 shadow p-4 space-y-4">
-      <h3 className="font-semibold text-[#E63946]">Partage sécurisé</h3>
+      {/* <h3 className="font-semibold text-[#E63946]">Partage sécurisé</h3> */}
 
       <form onSubmit={createLink} className="grid grid-cols-1 gap-3">
         {/* Mode de PIN */}
