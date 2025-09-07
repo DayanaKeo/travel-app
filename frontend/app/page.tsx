@@ -3,20 +3,16 @@ import Link from "next/link";
 export default function HomePage() {
   return (
     <div className="relative">
-      {/* ===== Background global (dégradés + halos) ===== */}
       <div aria-hidden className="pointer-events-none absolute inset-0 -z-10">
         <div className="absolute inset-0 bg-[radial-gradient(1200px_600px_at_10%_-10%,rgba(255,179,71,.25),transparent),radial-gradient(1200px_800px_at_110%_20%,rgba(255,99,132,.22),transparent),linear-gradient(to_bottom,#fff,rgba(255,255,255,.9))]" />
       </div>
 
-      {/* ===== Contenu principal (compatible Skip Link) ===== */}
       <main id="main">
-        {/* ===== HERO ===== */}
         <section
           aria-labelledby="hero-title"
           className="mx-auto max-w-6xl px-4 md:px-6 pt-10 md:pt-16 pb-10"
         >
           <div className="grid gap-8 md:grid-cols-2 md:gap-10 items-center">
-            {/* Colonne texte */}
             <div className="grid gap-5">
               <span className="inline-flex w-fit items-center gap-2 rounded-full bg-gradient-to-r from-orange-100 to-rose-100 text-orange-700 px-3 py-1 text-xs shadow-sm">
                 ✨ Nouveau : Partage sécurisé 48h + PIN chiffré
@@ -59,7 +55,6 @@ export default function HomePage() {
               </ul>
             </div>
 
-            {/* Colonne visuel (glassy) */}
             <div className="relative">
               <div aria-hidden className="absolute -inset-1 rounded-[28px] bg-gradient-to-r from-orange-400/40 via-red-400/40 to-pink-400/40 blur-2xl" />
               <div className="relative rounded-[28px] bg-white/60 backdrop-blur-xl shadow-2xl overflow-hidden ring-1 ring-white/60">
@@ -76,7 +71,6 @@ export default function HomePage() {
             </div>
           </div>
 
-          {/* Social proof → <dl> pour une sémantique correcte */}
           <dl className="mt-10 grid grid-cols-2 gap-3 md:grid-cols-4 md:gap-4">
             {[
               { k: "+12k", v: "voyages créés" },
@@ -98,7 +92,6 @@ export default function HomePage() {
           </dl>
         </section>
 
-        {/* ===== FEATURES ===== */}
         <section aria-labelledby="features-title" className="py-10 md:py-12">
           <div className="mx-auto max-w-6xl px-4 md:px-6">
             <h2 id="features-title" className="sr-only">Fonctionnalités principales</h2>
@@ -147,7 +140,6 @@ export default function HomePage() {
           </div>
         </section>
 
-        {/* ===== TESTIMONIALS ===== */}
         <section aria-labelledby="testi-title" className="py-10 md:py-12">
           <div className="mx-auto max-w-6xl px-4 md:px-6">
             <h2 id="testi-title" className="sr-only">Témoignages utilisateurs</h2>
@@ -173,7 +165,6 @@ export default function HomePage() {
           </div>
         </section>
 
-        {/* ===== CTA final ===== */}
         <section aria-labelledby="cta-title" className="pb-14 md:pb-16">
           <div className="relative mx-auto max-w-6xl px-4 md:px-6">
             <h2 id="cta-title" className="sr-only">Commencer à créer un voyage</h2>

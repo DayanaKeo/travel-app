@@ -1,9 +1,18 @@
-export default function VerifiedPage({
-  searchParams,
-}: {
-  searchParams?: { email?: string };
-}) {
-  const email = searchParams?.email;
+// app/auth/verified/page.tsx
+import Link from "next/link";
+
+// Next 15: searchParams est une Promise.
+// On tape aussi email en string | string[] pour être robuste.
+type PageCtx<P extends Record<string, string | string[]>> = {
+  searchParams?: Promise<P>;
+};
+
+export default async function VerifiedPage(
+  ctx: PageCtx<{ email?: string | string[] }>
+) {
+  const sp = (await ctx.searchParams) ?? {};
+  const rawEmail = sp.email;
+  const email = Array.isArray(rawEmail) ? rawEmail[0] : rawEmail;
 
   return (
     <main className="min-h-[70vh] flex items-center justify-center px-4">
@@ -23,12 +32,13 @@ export default function VerifiedPage({
           )}
         </p>
 
-        <a
+        {/* Navigation interne → Link (évite l’erreur ESLint Next) */}
+        <Link
           href="/auth/signin"
           className="mt-6 inline-block rounded-lg bg-indigo-600 px-4 py-2 font-medium text-white hover:bg-indigo-700"
         >
           Se connecter
-        </a>
+        </Link>
       </div>
     </main>
   );

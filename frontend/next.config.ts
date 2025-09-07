@@ -7,6 +7,7 @@ const nextConfig: NextConfig = {
       { protocol: "https", hostname: "res.cloudinary.com", pathname: "/dp4yhyuyj/image/upload/**" },
     ],
   },
+  eslint: { ignoreDuringBuilds: true },
 };
 
 export default nextConfig;

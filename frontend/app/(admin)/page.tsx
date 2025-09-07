@@ -2,9 +2,15 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { redirect } from "next/navigation";
 
+export const dynamic = "force-dynamic"; // empêche la pré-rendu SSG
+export const revalidate = 0;            // pas de cache
+export const runtime = "nodejs";  
+
+type Role = "admin" | "user" | undefined;
+
 async function getAdminSession() {
   const session = await getServerSession(authOptions);
-  const role = (session?.user as any)?.role;
+  const role: Role = (session?.user as { role?: Role } | undefined)?.role;
   if (!session || role !== "admin") redirect("/app");
   return session;
 }

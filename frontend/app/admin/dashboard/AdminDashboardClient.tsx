@@ -132,7 +132,6 @@ export default function AdminDashboardClient() {
         ))}
       </div>
 
-      {/* ===== Desktop: grille 2 colonnes (les 4 cartes visibles) ===== */}
       <div className="hidden lg:grid grid-cols-1 lg:grid-cols-2 gap-6">
         {cards}
       </div>

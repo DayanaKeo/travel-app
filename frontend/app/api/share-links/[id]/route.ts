@@ -7,7 +7,10 @@ import { logUsageFromRequest } from "@/lib/audit";
 export const runtime = "nodejs";
 const tokenSuffix = (t: string) => String(t).slice(-6);
 
-export async function DELETE(req: NextRequest, ctx: { params: Promise<{ id: string }> }) {
+type RouteCtx<P extends Record<string, string>> = { params: Promise<P> };
+type IdParam = { id: string };
+
+export async function DELETE(req: NextRequest, ctx: RouteCtx<IdParam>) {
   try {
     const { id } = await ctx.params;
     const linkId = Number(id);
@@ -31,12 +34,13 @@ export async function DELETE(req: NextRequest, ctx: { params: Promise<{ id: stri
     await logUsageFromRequest(req, {
       type: "share.revoke",
       user_id: userId,
-      meta: { voyageId: link.voyageId, token_suffix: tokenSuffix(link.token) }
+      meta: { voyageId: link.voyageId, token_suffix: tokenSuffix(link.token) },
     });
 
     return NextResponse.json({ data: updated });
-  } catch (e: any) {
-    if (e?.message === "UNAUTHORIZED") return NextResponse.json({ error: "Non authentifié" }, { status: 401 });
+  } catch (e: unknown) {
+    const msg = e instanceof Error ? e.message : String(e);
+    if (msg === "UNAUTHORIZED") return NextResponse.json({ error: "Non authentifié" }, { status: 401 });
     return NextResponse.json({ error: "Erreur interne" }, { status: 500 });
   }
 }

@@ -1,9 +1,10 @@
+// app/auth/signin/page.tsx
 "use client";
 
+import { Suspense, useEffect, useMemo, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { signIn } from "next-auth/react";
 import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
 
 function mapNextAuthError(code?: string | null) {
   switch (code) {
@@ -16,9 +17,30 @@ function mapNextAuthError(code?: string | null) {
   }
 }
 
+// ✅ Le composant page enveloppe le composant qui utilise useSearchParams
 export default function SignInPage() {
+  return (
+    <Suspense fallback={<SigninFallback />}>
+      <SignInInner />
+    </Suspense>
+  );
+}
+
+function SigninFallback() {
+  return (
+    <div className="min-h-screen grid place-items-center px-4">
+      <div className="w-full max-w-sm rounded-lg p-6 shadow-lg bg-white">
+        <h1 className="text-2xl font-semibold">Connexion</h1>
+        <p className="text-sm text-gray-500 mt-2">Chargement…</p>
+      </div>
+    </div>
+  );
+}
+
+function SignInInner() {
   const router = useRouter();
   const sp = useSearchParams();
+
   const callbackUrl = sp.get("callbackUrl") || "/voyages/listing";
   const nextAuthError = mapNextAuthError(sp.get("error"));
 
@@ -120,7 +142,6 @@ export default function SignInPage() {
             <div className="h-px flex-1 bg-gray-200" />
           </div>
 
-          {/* OAuth (optionnel) — n’affichera rien si non configuré côté NextAuth */}
           <div className="grid grid-cols-2 gap-2">
             <button
               type="button"
