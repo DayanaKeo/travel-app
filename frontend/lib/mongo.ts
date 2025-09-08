@@ -1,30 +1,17 @@
-import { MongoClient, Db } from "mongodb";
+import { MongoClient } from "mongodb";
 
-const uri = process.env.MONGODB_URI!;
-const dbName = process.env.MONGODB_DB || "travelbook";
+let client: MongoClient;
+let clientPromise: Promise<MongoClient>;
 
-let client: MongoClient | null = null;
-let db: Db | null = null;
+if (!process.env.MONGODB_URI) {
+  throw new Error("⚠️ MONGODB_URI n'est pas défini");
+}
 
-export async function getMongo(): Promise<Db> {
-  if (db) return db;
+const uri = process.env.MONGODB_URI;
 
-  if (!client) {
-    client = new MongoClient(uri, {
-      maxPoolSize: 10,   // limite de connexions simultanées
-      retryWrites: true, // sécurité sur les écritures
-    });
-  }
+client = new MongoClient(uri);
+clientPromise = client.connect();
 
-  
-  await client.connect();
-
-  db = client.db(dbName);
-
-  if (process.env.NODE_ENV === "development") {
-    await db.command({ ping: 1 });
-    console.log(`✅ Connecté à MongoDB : ${dbName}`);
-  }
-
-  return db!;
+export async function getMongo() {
+  return (await clientPromise).db("travelbook"); // nom de la DB
 }

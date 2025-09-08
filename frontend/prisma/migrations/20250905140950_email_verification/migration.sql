@@ -7,13 +7,13 @@
 
 */
 -- DropIndex
-DROP INDEX `VerificationToken_identifier_token_key` ON `verificationtoken`;
+DROP INDEX `VerificationToken_identifier_token_key` ON `VerificationToken`;
 
 -- DropIndex
-DROP INDEX `VerificationToken_token_key` ON `verificationtoken`;
+DROP INDEX `VerificationToken_token_key` ON `VerificationToken`;
 
 -- AlterTable
-ALTER TABLE `verificationtoken` DROP COLUMN `token`,
+ALTER TABLE `VerificationToken` DROP COLUMN `token`,
     ADD COLUMN `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
     ADD COLUMN `tokenHash` VARCHAR(191) NOT NULL;
 

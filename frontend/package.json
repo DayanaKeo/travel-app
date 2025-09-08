@@ -10,7 +10,8 @@
     "test": "jest",
     "mongo:migrate": "tsx -r dotenv/config scripts/migrate.ts",
     "mongo:seed": "tsx -r dotenv/config scripts/seed.ts",
-    "postinstall": "prisma generate"
+    "postinstall": "prisma generate",
+    "prisma:deploy": "prisma migrate deploy"
 
   },
   "dependencies": {

@@ -14,46 +14,46 @@
 
 */
 -- DropForeignKey
-ALTER TABLE `account` DROP FOREIGN KEY `Account_userId_fkey`;
+ALTER TABLE `Account` DROP FOREIGN KEY `Account_userId_fkey`;
 
 -- DropForeignKey
-ALTER TABLE `session` DROP FOREIGN KEY `Session_userId_fkey`;
+ALTER TABLE `Session` DROP FOREIGN KEY `Session_userId_fkey`;
 
 -- DropForeignKey
-ALTER TABLE `voyage` DROP FOREIGN KEY `Voyage_userId_fkey`;
+ALTER TABLE `Voyage` DROP FOREIGN KEY `Voyage_userId_fkey`;
 
 -- DropIndex
-DROP INDEX `Account_userId_fkey` ON `account`;
+DROP INDEX `Account_userId_fkey` ON `Account`;
 
 -- DropIndex
-DROP INDEX `Session_userId_fkey` ON `session`;
+DROP INDEX `Session_userId_fkey` ON `Session`;
 
 -- DropIndex
-DROP INDEX `Voyage_userId_fkey` ON `voyage`;
+DROP INDEX `Voyage_userId_fkey` ON `Voyage`;
 
 -- AlterTable
-ALTER TABLE `account` DROP PRIMARY KEY,
+ALTER TABLE `Account` DROP PRIMARY KEY,
     MODIFY `id` INTEGER NOT NULL AUTO_INCREMENT,
     MODIFY `userId` INTEGER NOT NULL,
     ADD PRIMARY KEY (`id`);
 
 -- AlterTable
-ALTER TABLE `session` DROP PRIMARY KEY,
+ALTER TABLE `Session` DROP PRIMARY KEY,
     MODIFY `id` INTEGER NOT NULL AUTO_INCREMENT,
     MODIFY `userId` INTEGER NOT NULL,
     ADD PRIMARY KEY (`id`);
 
 -- AlterTable
-ALTER TABLE `user` DROP PRIMARY KEY,
+ALTER TABLE `User` DROP PRIMARY KEY,
     MODIFY `id` INTEGER NOT NULL AUTO_INCREMENT,
     ADD PRIMARY KEY (`id`);
 
 -- AlterTable
-ALTER TABLE `verificationtoken` ADD COLUMN `id` INTEGER NOT NULL AUTO_INCREMENT,
+ALTER TABLE `VerificationToken` ADD COLUMN `id` INTEGER NOT NULL AUTO_INCREMENT,
     ADD PRIMARY KEY (`id`);
 
 -- AlterTable
-ALTER TABLE `voyage` MODIFY `userId` INTEGER NOT NULL;
+ALTER TABLE `Voyage` MODIFY `userId` INTEGER NOT NULL;
 
 -- AddForeignKey
 ALTER TABLE `Account` ADD CONSTRAINT `Account_userId_fkey` FOREIGN KEY (`userId`) REFERENCES `User`(`id`) ON DELETE CASCADE ON UPDATE CASCADE;
