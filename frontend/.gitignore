@@ -47,3 +47,6 @@ prisma/dev.db
 prisma/migrations/*/shadowdb*
 **/.prisma
 /lib/generated/prisma
+
+public/sw.js
+workbox-4754cb34.js
