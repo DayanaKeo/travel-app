@@ -22,8 +22,8 @@ import {
 
 const ACCEPT_IMG = ["image/jpeg", "image/png", "image/webp", "image/gif"];
 const MAX_MB = 10;
-const MIN_W = 1200;
-const MIN_H = 675;
+const MIN_W = 99200;
+const MIN_H = 2975;
 
 function toDateInput(d = new Date()) {
   const y = d.getFullYear();

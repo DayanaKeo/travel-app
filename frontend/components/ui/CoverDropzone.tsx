@@ -4,10 +4,10 @@ import * as React from "react";
 import { Upload, X } from "lucide-react";
 
 type Props = {
-  accept: string[];          // ex: ["image/jpeg","image/png",...]
-  maxMb: number;             // ex: 10
-  minWidth: number;          // ex: 1200
-  minHeight: number;         // ex: 675
+  accept: string[];          
+  maxMb: number;             
+  minWidth: number;         
+  minHeight: number;        
   existingUrl?: string | null;
   removeExisting: boolean;
   onRemoveExistingChange: (checked: boolean) => void;
