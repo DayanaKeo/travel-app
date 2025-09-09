@@ -1,3 +1,5 @@
+"use client";
+
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { redirect } from "next/navigation";
@@ -15,7 +17,6 @@ async function getAdminSession() {
   return session;
 }
 
-// Remplacer par un fetch /api/admin/stats plus tard
 async function getStats() {
   return {
     users: 128,
