@@ -1,0 +1,612 @@
+openapi: 3.1.0
+info:
+  title: TravelBook API
+  version: 1.0.0
+  description: >
+    API du **Carnet de Voyage Numérique** (Next.js App Router).
+    Authentification via **NextAuth** (JWT). Certaines routes sont publiques (partages).
+servers:
+  - url: http://localhost:3000
+    description: Local
+  - url: https://{your-vercel-domain}
+    description: Production
+    variables:
+      your-vercel-domain:
+        default: travelbook.vercel.app
+
+tags:
+  - name: Auth
+  - name: Users
+  - name: Voyages
+  - name: Etapes
+  - name: Medias
+  - name: Explorer
+  - name: ShareLinks
+  - name: Public
+  - name: Upload
+  - name: Admin
+  - name: Dev
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    Error:
+      type: object
+      properties:
+        error: { type: string }
+      required: [error]
+
+    PageMeta:
+      type: object
+      properties:
+        page: { type: integer, minimum: 1 }
+        limit: { type: integer, minimum: 1, maximum: 100 }
+        total: { type: integer, minimum: 0 }
+
+    User:
+      type: object
+      properties:
+        id: { type: integer }
+        name: { type: string, nullable: true }
+        email: { type: string, format: email }
+        image: { type: string, nullable: true }
+        status: { type: string, enum: [ACTIVE, SUSPENDED, DELETED] }
+        role: { type: string, enum: [USER, ADMIN] }
+        premium: { type: boolean }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+
+    Voyage:
+      type: object
+      properties:
+        id: { type: integer }
+        userId: { type: integer }
+        titre: { type: string }
+        description: { type: string, nullable: true }
+        dateDebut: { type: string, format: date-time }
+        dateFin: { type: string, format: date-time }
+        isPublic: { type: boolean }
+        coverUrl: { type: string, nullable: true }
+        _count:
+          type: object
+          properties:
+            etapes: { type: integer }
+            media: { type: integer }
+
+    Etape:
+      type: object
+      properties:
+        id: { type: integer }
+        voyageId: { type: integer }
+        titre: { type: string }
+        texte: { type: string, nullable: true }
+        adresse: { type: string }
+        latitude: { type: number }
+        longitude: { type: number }
+        date: { type: string, format: date-time }
+
+    Media:
+      type: object
+      properties:
+        id: { type: integer }
+        type: { type: string, enum: [image, video] }
+        url: { type: string }
+        voyageId: { type: integer, nullable: true }
+        etapeId: { type: integer, nullable: true }
+        createdAt: { type: string, format: date-time }
+
+    ShareLink:
+      type: object
+      properties:
+        id: { type: integer }
+        voyageId: { type: integer }
+        token: { type: string }
+        pinProtected: { type: boolean }
+        expiresAt: { type: string, format: date-time }
+
+security:
+  - bearerAuth: []
+
+paths:
+  /api/auth/signup:
+    post:
+      tags: [Auth]
+      summary: Inscription
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, email, password]
+              properties:
+                name: { type: string }
+                email: { type: string, format: email }
+                password: { type: string, format: password }
+      responses:
+        "201":
+          description: Utilisateur créé
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/User' }
+        "409": { description: Email déjà utilisé, content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+
+  /api/auth/verify:
+    post:
+      tags: [Auth]
+      summary: Vérifie un code/token d'email (si mis en place)
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                token: { type: string }
+      responses:
+        "200": { description: OK }
+
+  /api/users:
+    get:
+      tags: [Users]
+      summary: Récupérer le profil courant
+      responses:
+        "200":
+          description: Profil
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/User' }
+        "401": { description: Non authentifié }
+    patch:
+      tags: [Users]
+      summary: Mettre à jour le profil courant
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name: { type: string }
+                image: { type: string }
+      responses:
+        "200": { description: Mis à jour, content: { application/json: { schema: { $ref: '#/components/schemas/User' } } } }
+        "401": { description: Non authentifié }
+
+  /api/users/list:
+    get:
+      tags: [Users]
+      summary: Liste paginée des utilisateurs (admin)
+      parameters:
+        - in: query
+          name: page
+          schema: { type: integer, default: 1 }
+        - in: query
+          name: limit
+          schema: { type: integer, default: 20 }
+      responses:
+        "200":
+          description: Liste
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: '#/components/schemas/User' }
+                  meta: { $ref: '#/components/schemas/PageMeta' }
+
+  /api/users/stats:
+    get:
+      tags: [Users]
+      summary: Statistiques utilisateurs (admin)
+      responses:
+        "200": { description: OK }
+
+  /api/users/export:
+    get:
+      tags: [Users]
+      summary: Export CSV/JSON des utilisateurs (admin)
+      responses:
+        "200":
+          description: Fichier d'export
+          content:
+            text/csv: {}
+            application/json: {}
+
+  /api/users/{id}:
+    get:
+      tags: [Users]
+      summary: Détails d’un utilisateur (admin)
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/User' } } } }
+
+  /api/voyages:
+    get:
+      tags: [Voyages]
+      summary: Liste des voyages de l’utilisateur
+      parameters:
+        - in: query
+          name: page
+          schema: { type: integer, default: 1 }
+        - in: query
+          name: limit
+          schema: { type: integer, default: 20 }
+      responses:
+        "200":
+          description: Liste
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: '#/components/schemas/Voyage' }
+                  meta: { $ref: '#/components/schemas/PageMeta' }
+    post:
+      tags: [Voyages]
+      summary: Créer un voyage
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [titre, dateDebut, dateFin]
+              properties:
+                titre: { type: string }
+                description: { type: string }
+                dateDebut: { type: string, format: date-time }
+                dateFin: { type: string, format: date-time }
+                isPublic: { type: boolean }
+      responses:
+        "201": { description: Créé, content: { application/json: { schema: { $ref: '#/components/schemas/Voyage' } } } }
+
+  /api/voyages/listing:
+    get:
+      tags: [Voyages]
+      summary: Listing pour l’explorateur (cartes, aperçu)
+      responses:
+        "200":
+          description: OK
+
+  /api/voyages/{id}:
+    get:
+      tags: [Voyages]
+      summary: Détails d’un voyage
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/Voyage' } } } }
+    patch:
+      tags: [Voyages]
+      summary: Mettre à jour un voyage
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                titre: { type: string }
+                description: { type: string }
+                dateDebut: { type: string, format: date-time }
+                dateFin: { type: string, format: date-time }
+                isPublic: { type: boolean }
+      responses:
+        "200": { description: OK }
+    delete:
+      tags: [Voyages]
+      summary: Supprimer un voyage
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+      responses:
+        "204": { description: Supprimé }
+
+  /api/etapes:
+    get:
+      tags: [Etapes]
+      summary: Liste des étapes (par voyageId)
+      parameters:
+        - in: query
+          name: voyageId
+          required: true
+          schema: { type: integer }
+      responses:
+        "200":
+          description: OK
+    post:
+      tags: [Etapes]
+      summary: Créer une étape
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [voyageId, titre, latitude, longitude, date]
+              properties:
+                voyageId: { type: integer }
+                titre: { type: string }
+                texte: { type: string }
+                adresse: { type: string }
+                latitude: { type: number }
+                longitude: { type: number }
+                date: { type: string, format: date-time }
+      responses:
+        "201": { description: Créé, content: { application/json: { schema: { $ref: '#/components/schemas/Etape' } } } }
+
+  /api/etapes/{id}:
+    patch:
+      tags: [Etapes]
+      summary: Modifier une étape
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                titre: { type: string }
+                texte: { type: string }
+                adresse: { type: string }
+                latitude: { type: number }
+                longitude: { type: number }
+                date: { type: string, format: date-time }
+      responses:
+        "200": { description: OK }
+    delete:
+      tags: [Etapes]
+      summary: Supprimer une étape
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+      responses:
+        "204": { description: Supprimé }
+
+  /api/medias:
+    get:
+      tags: [Medias]
+      summary: Lister les médias (filtrables)
+      parameters:
+        - in: query
+          name: type
+          schema: { type: string, enum: [image, video] }
+        - in: query
+          name: voyageId
+          schema: { type: integer }
+        - in: query
+          name: etapeId
+          schema: { type: integer }
+      responses:
+        "200": { description: OK }
+    post:
+      tags: [Medias]
+      summary: Uploader un média lié à un voyage/étape
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                file:
+                  type: string
+                  format: binary
+                voyageId: { type: integer }
+                etapeId: { type: integer }
+      responses:
+        "201": { description: Créé, content: { application/json: { schema: { $ref: '#/components/schemas/Media' } } } }
+
+  /api/medias/list:
+    get:
+      tags: [Medias]
+      summary: Listing rapide (cards)
+      responses:
+        "200": { description: OK }
+
+  /api/medias/{id}:
+    delete:
+      tags: [Medias]
+      summary: Supprimer un média
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+      responses:
+        "204": { description: Supprimé }
+
+  /api/explorer/voyage/{id}:
+    get:
+      tags: [Explorer]
+      summary: Vue explorateur d’un voyage (carte + résumé)
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+      responses:
+        "200": { description: OK }
+
+  /api/share-links:
+    post:
+      tags: [ShareLinks]
+      summary: Créer un lien de partage 48h (option PIN)
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [voyageId]
+              properties:
+                voyageId: { type: integer }
+                pin: { type: string, description: "PIN 4 chiffres (optionnel)" }
+      responses:
+        "201":
+          description: Lien créé
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ShareLink' }
+
+  /api/share-links/{id}:
+    delete:
+      tags: [ShareLinks]
+      summary: Révoquer un lien de partage
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+      responses:
+        "204": { description: Supprimé }
+
+  /api/share-links/check:
+    post:
+      tags: [ShareLinks]
+      summary: Vérifie qu’un PIN correspond au token
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [token, pin]
+              properties:
+                token: { type: string }
+                pin: { type: string }
+      responses:
+        "200": { description: OK }
+
+  /api/share-links/verify:
+    post:
+      tags: [ShareLinks]
+      summary: Vérifie la validité du lien (expiration)
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                token: { type: string }
+      responses:
+        "200": { description: OK }
+
+  /api/public/voyages/{token}:
+    get:
+      tags: [Public]
+      summary: Récupère le voyage public via token
+      parameters:
+        - in: path
+          name: token
+          required: true
+          schema: { type: string }
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/Voyage' } } } }
+        "404": { description: Not Found }
+
+  /api/upload/avatar:
+    post:
+      tags: [Upload]
+      summary: Upload d’avatar utilisateur
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file]
+              properties:
+                file:
+                  type: string
+                  format: binary
+      responses:
+        "201": { description: Créé }
+
+  /api/admin/users:
+    get:
+      tags: [Admin]
+      summary: Liste (admin)
+      responses:
+        "200": { description: OK }
+
+  /api/admin/stats:
+    get:
+      tags: [Admin]
+      summary: Stats consolidées SQL + Mongo
+      responses:
+        "200": { description: OK }
+
+  /api/admin/kpi:
+    get:
+      tags: [Admin]
+      summary: KPI (périodes 7/30 jours)
+      responses:
+        "200": { description: OK }
+
+  /api/admin/metrics:
+    get:
+      tags: [Admin]
+      summary: Métriques (usage_events / audit)
+      responses:
+        "200": { description: OK }
+
+  /api/admin/snapshots:
+    get:
+      tags: [Admin]
+      summary: Snapshots journaliers
+      responses:
+        "200": { description: OK }
+
+  /api/admin/bootstrap-indexes:
+    post:
+      tags: [Admin]
+      summary: Création des index Mongo
+      responses:
+        "200": { description: OK }
+
+  /api/admin/bootstrap-mongo:
+    post:
+      tags: [Admin]
+      summary: Initialisation collections Mongo
+      responses:
+        "200": { description: OK }
+
+  /api/admin/mongo-test:
+    get:
+      tags: [Admin]
+      summary: Test de connexion Mongo
+      responses:
+        "200": { description: OK }
+
+  /api/dev/send-test:
+    post:
+      tags: [Dev]
+      summary: Envoi de mail de test (dev uniquement)
+      responses:
+        "200": { description: OK }
