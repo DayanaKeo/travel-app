@@ -14,52 +14,52 @@
 
 */
 -- DropForeignKey
-ALTER TABLE `Account` DROP FOREIGN KEY `Account_userId_fkey`;
+ALTER TABLE `account` DROP FOREIGN KEY `account_userId_fkey`;
 
 -- DropForeignKey
-ALTER TABLE `Session` DROP FOREIGN KEY `Session_userId_fkey`;
+ALTER TABLE `session` DROP FOREIGN KEY `session_userId_fkey`;
 
 -- DropForeignKey
-ALTER TABLE `Voyage` DROP FOREIGN KEY `Voyage_userId_fkey`;
+ALTER TABLE `voyage` DROP FOREIGN KEY `voyage_userId_fkey`;
 
 -- DropIndex
-DROP INDEX `Account_userId_fkey` ON `Account`;
+DROP INDEX `account_userId_fkey` ON `account`;
 
 -- DropIndex
-DROP INDEX `Session_userId_fkey` ON `Session`;
+DROP INDEX `session_userId_fkey` ON `session`;
 
 -- DropIndex
-DROP INDEX `Voyage_userId_fkey` ON `Voyage`;
+DROP INDEX `voyage_userId_fkey` ON `voyage`;
 
 -- AlterTable
-ALTER TABLE `Account` DROP PRIMARY KEY,
+ALTER TABLE `account` DROP PRIMARY KEY,
     MODIFY `id` INTEGER NOT NULL AUTO_INCREMENT,
     MODIFY `userId` INTEGER NOT NULL,
     ADD PRIMARY KEY (`id`);
 
 -- AlterTable
-ALTER TABLE `Session` DROP PRIMARY KEY,
+ALTER TABLE `session` DROP PRIMARY KEY,
     MODIFY `id` INTEGER NOT NULL AUTO_INCREMENT,
     MODIFY `userId` INTEGER NOT NULL,
     ADD PRIMARY KEY (`id`);
 
 -- AlterTable
-ALTER TABLE `User` DROP PRIMARY KEY,
+ALTER TABLE `user` DROP PRIMARY KEY,
     MODIFY `id` INTEGER NOT NULL AUTO_INCREMENT,
     ADD PRIMARY KEY (`id`);
 
 -- AlterTable
-ALTER TABLE `VerificationToken` ADD COLUMN `id` INTEGER NOT NULL AUTO_INCREMENT,
+ALTER TABLE `verificationToken` ADD COLUMN `id` INTEGER NOT NULL AUTO_INCREMENT,
     ADD PRIMARY KEY (`id`);
 
 -- AlterTable
-ALTER TABLE `Voyage` MODIFY `userId` INTEGER NOT NULL;
+ALTER TABLE `voyage` MODIFY `userId` INTEGER NOT NULL;
 
 -- AddForeignKey
-ALTER TABLE `Account` ADD CONSTRAINT `Account_userId_fkey` FOREIGN KEY (`userId`) REFERENCES `User`(`id`) ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE `account` ADD CONSTRAINT `account_userId_fkey` FOREIGN KEY (`userId`) REFERENCES `user`(`id`) ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE `Session` ADD CONSTRAINT `Session_userId_fkey` FOREIGN KEY (`userId`) REFERENCES `User`(`id`) ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE `session` ADD CONSTRAINT `session_userId_fkey` FOREIGN KEY (`userId`) REFERENCES `user`(`id`) ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE `Voyage` ADD CONSTRAINT `Voyage_userId_fkey` FOREIGN KEY (`userId`) REFERENCES `User`(`id`) ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE `voyage` ADD CONSTRAINT `voyage_userId_fkey` FOREIGN KEY (`userId`) REFERENCES `user`(`id`) ON DELETE CASCADE ON UPDATE CASCADE;
