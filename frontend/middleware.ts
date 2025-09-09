@@ -2,26 +2,32 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { getToken } from "next-auth/jwt";
 
+
 const PUBLIC_API = [
-  "/api/auth",
-  "/api/health",
-  "/api/voyages/public",
-  "/api/share-links/",
-  "api/auth/signup",
-  "/api/auth/verify",
-  "/api/auth/verify/resend",
-  "/api/dev/send-test"
+  /^\/api\/auth(\/.*)?$/,             
+  /^\/api\/health$/,
+  /^\/api\/voyages\/public(\/.*)?$/,
+  /^\/api\/share-links(\/.*)?$/,
+  /^\/api\/auth\/signup$/,  
+  /^\/api\/auth\/verify(\/resend)?$/, 
+  /^\/api\/dev\/send-test$/,
 ];
 
 const ADMIN_PATHS = [/^\/admin($|\/)/, /^\/api\/admin($|\/)/];
 
+function isPublicApi(pathname: string) {
+  return PUBLIC_API.some((re) => re.test(pathname));
+}
+
 export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
-  if (PUBLIC_API.some((p) => pathname.startsWith(p))) {
+  // 1) APIs publiques → laisses passer
+  if (isPublicApi(pathname)) {
     return NextResponse.next();
   }
 
+  // 2) Protection globale (API et pages matchées)
   const token = await getToken({ req, secret: process.env.NEXTAUTH_SECRET });
 
   if (!token?.uid) {
@@ -29,7 +35,9 @@ export async function middleware(req: NextRequest) {
       return NextResponse.json({ error: "Non authentifié" }, { status: 401 });
     }
     const url = req.nextUrl.clone();
-    url.pathname = "/auth/signin";
+    url.pathname = "/voyages/listing";
+    url.searchParams.set("callbackUrl", pathname + req.nextUrl.search);
+    url.searchParams.set("alert", "auth");
     return NextResponse.redirect(url);
   }
 
@@ -46,16 +54,17 @@ export async function middleware(req: NextRequest) {
 
   const res = NextResponse.next();
   res.headers.set("x-user-id", String(token.uid));
-  res.headers.set("x-user-role", (token.role ?? "USER") as "USER" | "ADMIN");
+  res.headers.set("x-user-role", String(token.role ?? "USER"));
   res.headers.set("x-user-premium", String(!!token.premium));
   return res;
 }
 
+// Ne fais matcher que ce qui doit être protégé
 export const config = {
   matcher: [
     "/api/:path*",
     "/admin/:path*",
+    "/voyages/listing",
+    "/voyages/:path*",  
   ],
 };
-
-// protège l’espace admin frontend
