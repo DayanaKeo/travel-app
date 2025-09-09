@@ -12,7 +12,6 @@ function daysAgoUTC(n: number) {
 }
 
 export async function GET(req: NextRequest) {
-  // Sécurité (le middleware protège déjà /api/admin/*, on double-vérifie)
   const role = (req.headers.get("x-user-role") || "").toUpperCase();
   if (role !== "ADMIN") {
     return NextResponse.json({ error: "Accès interdit" }, { status: 403 });
