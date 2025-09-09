@@ -91,7 +91,7 @@ export default function VoyagesListingClient() {
 
         <div className="grid md:grid-cols-3 gap-4">
           <StatCard icon={<Globe2 />} label="Total voyages" value={total} />
-          <StatCard icon={<MapPin />} label="Pays visités" value={Math.max(1, Math.min(12, total))} />
+          <StatCard icon={<MapPin />} label="Pays visités" value={Math.max(0, Math.min(12, total))} />
           <StatCard icon={<Share2 />} label="Partagés" value={shared} />
         </div>
 
