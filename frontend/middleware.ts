@@ -11,6 +11,7 @@ const PUBLIC_API = [
   /^\/api\/auth\/signup$/,  
   /^\/api\/auth\/verify(\/resend)?$/, 
   /^\/api\/dev\/send-test$/,
+  /^\/api\/explorer(\/.*)?$/,
 ];
 
 const ADMIN_PATHS = [/^\/admin($|\/)/, /^\/api\/admin($|\/)/];
