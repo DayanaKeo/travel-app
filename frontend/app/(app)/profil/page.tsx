@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useState, useCallback } from "react";
 import { useSession } from "next-auth/react";
+import { useRouter } from "next/navigation";
 import ProfileHeader from "@/components/profile/ProfileHeader";
 import Tabs from "@/components/profile/Tabs";
 import InfosTab from "@/components/profile/tabs/InfosTab";
@@ -9,15 +10,27 @@ import PrefsTab from "@/components/profile/tabs/PrefsTab";
 import SecurityTab from "@/components/profile/tabs/SecurityTab";
 
 export default function ProfilPage() {
-  const { data: session } = useSession();
+  const router = useRouter();
+  const { data: session, status } = useSession();
   const [me, setMe] = useState<any>(null);
   const [tab, setTab] = useState<"infos"|"stats"|"prefs"|"security">("infos");
 
+  // Attendre la session avant de fetch /api/users
   useEffect(() => {
     let alive = true;
-    fetch("/api/users").then(r=>r.json()).then((data)=>{ if (alive) setMe(data); });
+    if (status !== "authenticated") return;
+    (async () => {
+      const res = await fetch("/api/users", { credentials: "include", cache: "no-store" });
+      if (!alive) return;
+      if (res.status === 401) {
+        router.push("/auth/signin?callbackUrl=/profil&alert=auth");
+        return;
+      }
+      const data = await res.json().catch(() => null);
+      if (alive) setMe(data);
+    })();
     return () => { alive = false; };
-  }, []);
+  }, [status, router]);
 
   const handleProfilSaved = useCallback((profil:any) => {
     setMe((prev:any)=> ({ ...prev, profil }));
@@ -27,6 +40,8 @@ export default function ProfilPage() {
     setMe((prev:any)=> ({ ...prev, preferences }));
   }, []);
 
+  if (status === "loading") return <div className="p-4">Chargement de la session…</div>;
+  if (status !== "authenticated") return <div className="p-4">Redirection…</div>;
   if (!me) return <div className="p-4">Chargement…</div>;
 
   const isAdmin = session?.user?.role === "ADMIN";
