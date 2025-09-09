@@ -177,7 +177,7 @@ export default function HomePage() {
                 </div>
                 <div className="flex md:justify-end">
                   <Link
-                    href="/auth/signup"
+                    href="/auth/signin"
                     className="px-5 py-2.5 rounded-full text-white shadow-lg shadow-red-500/20 hover:shadow-red-500/30 transition
                                bg-gradient-to-r from-orange-500 via-red-500 to-pink-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-400"
                   >
