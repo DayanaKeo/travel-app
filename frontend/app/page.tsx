@@ -40,7 +40,7 @@ export default function HomePage() {
                   Ouvrir l’app
                 </Link>
                 <Link
-                  href="/explore"
+                  href="/explorer"
                   className="px-5 py-2.5 rounded-full bg-white/70 backdrop-blur border border-white/60 text-neutral-700 hover:bg-white transition
                              focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-400"
                 >

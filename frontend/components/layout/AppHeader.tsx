@@ -68,7 +68,7 @@ export default function AppHeader() {
 
             <nav className="hidden md:flex items-center gap-1" role="navigation" aria-label="Navigation principale">
               <NavPill href="/voyages/listing">Mes voyages</NavPill>
-              <NavPill href="/explore">Explorer</NavPill>
+              <NavPill href="/explorer">Explorer</NavPill>
             </nav>
 
             <div className="flex items-center gap-2">
@@ -108,7 +108,7 @@ export default function AppHeader() {
             )}
           >
             <NavPill href="/voyages/listing" onClick={() => setMobileOpen(false)}>Mes voyages</NavPill>
-            <NavPill href="/explore" onClick={() => setMobileOpen(false)}>Explorer</NavPill>
+            <NavPill href="/explorer" onClick={() => setMobileOpen(false)}>Explorer</NavPill>
             {canInstall && (
               <button
                 onClick={promptInstall}

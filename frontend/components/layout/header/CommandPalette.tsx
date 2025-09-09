@@ -30,7 +30,7 @@ export default function CommandPalette({
           <div className="text-xs text-neutral-500 px-3 py-2">Raccourcis</div>
           <ul className="grid gap-1 px-1 pb-2">
             <li><Link href="/voyages/listing" onClick={onClose} className="block px-3 py-2 rounded-xl hover:bg-neutral-100/70 dark:hover:bg-neutral-800/60 text-sm">Mes voyages</Link></li>
-            <li><Link href="/explore" onClick={onClose} className="block px-3 py-2 rounded-xl hover:bg-neutral-100/70 dark:hover:bg-neutral-800/60 text-sm">Explorer</Link></li>
+            <li><Link href="/explorer" onClick={onClose} className="block px-3 py-2 rounded-xl hover:bg-neutral-100/70 dark:hover:bg-neutral-800/60 text-sm">Explorer</Link></li>
             {isAdmin && <li><Link href="/admin/dashboard" onClick={onClose} className="block px-3 py-2 rounded-xl hover:bg-neutral-100/70 dark:hover:bg-neutral-800/60 text-sm">Espace admin</Link></li>}
           </ul>
         </div>

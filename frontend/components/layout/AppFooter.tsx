@@ -109,7 +109,7 @@ export default function AppFooter() {
               Produit
             </span>
             <FooterLink href="/app">Application</FooterLink>
-            <FooterLink href="/explore">Explorer</FooterLink>
+            <FooterLink href="/explorer">Explorer</FooterLink>
             <FooterLink href="/pricing">Offres</FooterLink>
           </nav>
 
