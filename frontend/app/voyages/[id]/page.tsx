@@ -40,30 +40,34 @@ const plural = (n: number, s: string, p = s + "s") => `${n} ${n > 1 ? p : s}`;
 
 type PageCtx<P extends Record<string, string>> = { params: Promise<P> };
 
+function getOrigin(h: Headers) {
+  const host = h.get("x-forwarded-host") ?? h.get("host") ?? "localhost:3000";
+  const proto = h.get("x-forwarded-proto") ?? (host.includes("localhost") ? "http" : "https");
+  return `${proto}://${host}`;
+}
+
 export default async function VoyageDetailPage(ctx: PageCtx<{ id: string }>) {
-  const { id } = await ctx.params; // ✅ params est une Promise
+  const { id } = await ctx.params;
   const voyageId = Number(id);
   if (!Number.isInteger(voyageId) || voyageId <= 0) notFound();
 
   // cookies() / headers() sont synchrones côté serveur
   const cookieStore = await cookies();
-  const cookieHeader = cookieStore
-    .getAll()
-    .map((c) => `${encodeURIComponent(c.name)}=${encodeURIComponent(c.value)}`)
-    .join("; ");
+  const cookieHeader = cookieStore.getAll().map((c) => `${c.name}=${c.value}`).join("; ");
 
   const h = await headers();
-  const forwardedHost =
-    h.get("x-forwarded-host") ?? h.get("host") ?? process.env.NEXT_PUBLIC_APP_URL ?? "localhost:3000";
-  const proto = h.get("x-forwarded-proto") ?? (forwardedHost.includes("localhost") ? "http" : "https");
-  const base = forwardedHost.startsWith("http") ? forwardedHost : `${proto}://${forwardedHost}`;
+  const origin = getOrigin(h);
 
-  const auth = h.get("authorization") ?? undefined;
+  const auth = (await h).get("authorization") ?? undefined;
   const commonHeaders: HeadersInit = auth ? { cookie: cookieHeader, authorization: auth } : { cookie: cookieHeader };
 
+  // ✅ URLs ABSOLUES (évite "Failed to parse URL from /api/…")
+  const voyageUrl = new URL(`/api/voyages/${voyageId}`, origin).toString();
+  const etapesUrl = new URL(`/api/etapes?voyageId=${voyageId}&order=asc`, origin).toString();
+
   const [voyageRes, etapesRes] = await Promise.all([
-    fetch(`${base}/api/voyages/${voyageId}`, { cache: "no-store", headers: commonHeaders }),
-    fetch(`${base}/api/etapes?voyageId=${voyageId}&order=asc`, { cache: "no-store", headers: commonHeaders }),
+    fetch(voyageUrl, { cache: "no-store", headers: commonHeaders }),
+    fetch(etapesUrl, { cache: "no-store", headers: commonHeaders }),
   ]);
 
   if (voyageRes.status === 404) notFound();
@@ -76,7 +80,6 @@ export default async function VoyageDetailPage(ctx: PageCtx<{ id: string }>) {
     throw new Error(j?.error || `Impossible de charger les étapes du voyage #${voyageId}`);
   }
 
-  // ❌ plus de "as any"
   const { data: voyage } = (await voyageRes.json()) as { data: Voyage };
   const { data: etapes } = (await etapesRes.json()) as { data: Etape[] };
 
